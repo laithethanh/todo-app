@@ -1,12 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
+dotenv.config(); // Phải gọi dòng này trước khi require bất kỳ file nào trong src
+
 const { connectDB, sequelize } = require("./src/config/db");
 const { getVietnamTimeISO } = require("./src/utils/time");
 const errorHandler = require("./src/middlewares/errorHandler");
 const authRoutes = require("./src/routes/auth.routes");
-
-dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
