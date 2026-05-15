@@ -1,20 +1,23 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Login info:", {
-      username,
-      password,
-    });
-    alert("Login clicked!");
-    navigate("/auth/todos");
+    try {
+      await login({ username, password });
+      // Nếu login thành công (không throw error), chuyển hướng người dùng
+      navigate("/auth/todos");
+    } catch (error) {
+      // Lỗi đã được xử lý hiển thị toast thông báo trong AuthProvider
+    }
   };
 
   return (
