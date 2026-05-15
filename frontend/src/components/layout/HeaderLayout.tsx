@@ -1,21 +1,18 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
-import ConfirmModal from "./ConfirmModal";
+import { useAuth } from "../../hooks/useAuth";
+import ConfirmModal from "../common/ConfirmModal";
+import { FaSun, FaMoon, FaUser } from "react-icons/fa";
 
 export default function HeaderLayout() {
-  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState<boolean>(false);
 
-  const { user, logout } = useAuth();
+  const { user, logout, darkMode, setDarkMode } = useAuth();
   const navigate = useNavigate();
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-
-    // demo đơn giản (sau này bạn có thể nâng cấp bằng context)
-    document.documentElement.classList.toggle("dark");
+    setDarkMode(darkMode === "true" ? "false" : "true");
   };
 
   const handleLogout = () => {
@@ -30,7 +27,7 @@ export default function HeaderLayout() {
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <header className="w-full bg-white dark:bg-gray-900 shadow-md px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="text-xl font-bold text-blue-600">TodoApp</div>
@@ -56,9 +53,18 @@ export default function HeaderLayout() {
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
-            className="p-2 rounded-lg border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-2 rounded-xl transition-all duration-300 
+                     bg-gray-100 dark:bg-gray-800 
+                     hover:bg-gray-200 dark:hover:bg-gray-700
+                     border border-gray-200 dark:border-gray-700
+                     shadow-sm flex items-center justify-center"
+            aria-label="Toggle Theme"
           >
-            {darkMode ? "🌙" : "☀️"}
+            {darkMode === "true" ? (
+              <FaSun className="text-yellow-400 text-lg" />
+            ) : (
+              <FaMoon className="text-gray-700 text-lg" />
+            )}
           </button>
 
           {/* Profile Icon */}
@@ -67,7 +73,7 @@ export default function HeaderLayout() {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition"
             >
-              👤
+              <FaUser />
             </div>
 
             {showProfileMenu && (
@@ -91,7 +97,10 @@ export default function HeaderLayout() {
           </div>
         </div>
       </header>
-      <Outlet />
+
+      <main>
+        <Outlet />
+      </main>
 
       <ConfirmModal
         isOpen={isLogoutModalOpen}
@@ -100,6 +109,6 @@ export default function HeaderLayout() {
         onConfirm={confirmLogoutAction}
         onCancel={() => setIsLogoutModalOpen(false)}
       />
-    </>
+    </div>
   );
 }

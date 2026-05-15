@@ -26,6 +26,8 @@ export interface RegisterResponse {
 }
 
 export interface AuthContextType {
+  darkMode: string;
+  setDarkMode: React.Dispatch<React.SetStateAction<string>>;
   user: User | null;
   token: string | null;
   login: (data: LoginRequest) => Promise<LoginResponse>;

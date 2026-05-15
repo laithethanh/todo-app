@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import HeaderLayout from "./components/HeaderLayout";
+import HeaderLayout from "./components/layout/HeaderLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import TodoList from "./pages/TodoList";
@@ -26,51 +26,61 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return user ? <Navigate to="/auth/todos" replace /> : <>{children}</>;
 };
 
+const AppContent = () => {
+  const { darkMode } = useAuth();
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<HomeRedirect />} />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/auth"
+          element={
+            <ProtectedRoute>
+              <HeaderLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="todos" element={<TodoList />} />
+        </Route>
+      </Routes>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={darkMode === "true" ? "dark" : "light"}
+      />
+    </>
+  );
+};
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/auth"
-            element={
-              <ProtectedRoute>
-                <HeaderLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="todos" element={<TodoList />} />
-          </Route>
-        </Routes>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
+        <AppContent />
       </AuthProvider>
     </BrowserRouter>
   );

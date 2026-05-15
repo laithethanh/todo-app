@@ -14,12 +14,26 @@ import { toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [darkMode, setDarkMode] = useState<string>(
+    () => localStorage.getItem("darkMode") || "false",
+  );
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token"),
   );
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Cập nhật localStorage và class của document khi darkMode thay đổi
+    localStorage.setItem("darkMode", darkMode);
+    if (darkMode === "true") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    // Logic kiểm tra token ban đầu
     // Đảm bảo header Authorization của axios được thiết lập nếu có token còn hạn
     if (token) {
       setAuthToken(token);
@@ -90,6 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider
       value={{
+        darkMode,
+        setDarkMode,
         user,
         token,
         login: Login,

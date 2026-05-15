@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FaTrash } from "react-icons/fa";
 
 type Todo = {
   id: number;
@@ -18,8 +19,8 @@ export default function TodoList() {
   const toggleTodo = (id: number) => {
     setTodos((prev) =>
       prev.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
     );
   };
 
@@ -37,10 +38,11 @@ export default function TodoList() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-
       {/* Header Actions */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Tasks</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          My Tasks
+        </h1>
 
         <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
           + Add Task
@@ -52,7 +54,9 @@ export default function TodoList() {
         <button
           onClick={() => setFilter("all")}
           className={`px-3 py-1 rounded ${
-            filter === "all" ? "bg-blue-600 text-white" : "bg-gray-200"
+            filter === "all"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
           }`}
         >
           All
@@ -61,7 +65,9 @@ export default function TodoList() {
         <button
           onClick={() => setFilter("active")}
           className={`px-3 py-1 rounded ${
-            filter === "active" ? "bg-blue-600 text-white" : "bg-gray-200"
+            filter === "active"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
           }`}
         >
           Active
@@ -70,7 +76,9 @@ export default function TodoList() {
         <button
           onClick={() => setFilter("completed")}
           className={`px-3 py-1 rounded ${
-            filter === "completed" ? "bg-blue-600 text-white" : "bg-gray-200"
+            filter === "completed"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
           }`}
         >
           Completed
@@ -80,13 +88,13 @@ export default function TodoList() {
       {/* Todo List */}
       <div className="space-y-3">
         {filteredTodos.length === 0 && (
-          <p className="text-gray-500">No tasks found</p>
+          <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
         )}
 
         {filteredTodos.map((todo) => (
           <div
             key={todo.id}
-            className="flex items-center justify-between p-4 bg-white shadow rounded-lg"
+            className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow rounded-lg border dark:border-gray-700 transition-colors duration-200"
           >
             {/* Left */}
             <div className="flex items-center gap-3">
@@ -94,12 +102,14 @@ export default function TodoList() {
                 type="checkbox"
                 checked={todo.completed}
                 onChange={() => toggleTodo(todo.id)}
-                className="w-5 h-5"
+                className="w-5 h-5 cursor-pointer accent-blue-600"
               />
 
               <span
                 className={`${
-                  todo.completed ? "line-through text-gray-400" : ""
+                  todo.completed
+                    ? "line-through text-gray-400 dark:text-gray-500"
+                    : "text-gray-800 dark:text-gray-200"
                 }`}
               >
                 {todo.title}
@@ -111,7 +121,7 @@ export default function TodoList() {
               onClick={() => deleteTodo(todo.id)}
               className="text-red-500 hover:text-red-700"
             >
-              🗑️
+              <FaTrash />
             </button>
           </div>
         ))}

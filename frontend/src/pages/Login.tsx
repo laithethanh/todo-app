@@ -21,10 +21,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg w-full max-w-md border dark:border-gray-700">
         {/* Title */}
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
+        <h2 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
           Login
         </h2>
 
@@ -32,14 +32,14 @@ export default function Login() {
         <form onSubmit={handleLogin} className="space-y-5">
           {/* Username */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
               Username
             </label>
             <input
               type="text"
               placeholder="Enter your username"
               autoComplete="username"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -47,14 +47,14 @@ export default function Login() {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
               Password
             </label>
             <input
               type="password"
               placeholder="Enter your password"
               autoComplete="current-password"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -70,7 +70,7 @@ export default function Login() {
         </form>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
           Don’t have an account?{" "}
           <Link
             to="/register"
