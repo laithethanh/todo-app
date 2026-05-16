@@ -1,4 +1,10 @@
-import { TodoResponse, UpdateStatusRequest, UpdateTaskRequest } from "../types";
+import {
+  TodoResponse,
+  UpdateStatusRequest,
+  UpdateTaskRequest,
+  DeleteRequest,
+  DeleteResponse,
+} from "../types";
 import api from "./api";
 
 export const todoService = {
@@ -26,6 +32,10 @@ export const todoService = {
     data,
   }: UpdateTaskRequest): Promise<TodoResponse> => {
     const res = await api.patch<TodoResponse>(`/todos/${id}`, data);
+    return res.data;
+  },
+  deleteOneTask: async ({ id }: DeleteRequest): Promise<DeleteResponse> => {
+    const res = await api.delete<DeleteResponse>(`/todos/${id}`);
     return res.data;
   },
 };

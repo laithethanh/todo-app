@@ -89,4 +89,28 @@ const updateTask = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllTasks, getAllTasksById, updateTaskStatus, updateTask };
+const deleteOneTask = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const deleteRow = await todoService.deleteOneTask(id, userId);
+    if (!deleteRow) {
+      return next(
+        createHttpError(404, "Không tìm thấy task hoặc bạn không có quyền xóa"),
+      );
+    }
+    return res
+      .status(200)
+      .json({ message: `Xóa thành công task có id = ${id}` });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+module.exports = {
+  getAllTasks,
+  getAllTasksById,
+  updateTaskStatus,
+  updateTask,
+  deleteOneTask,
+};

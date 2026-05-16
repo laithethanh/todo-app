@@ -39,9 +39,20 @@ const updateTask = async (taskId, userId, data) => {
   return task;
 };
 
+const deleteOneTask = async (taskId, userId) => {
+  const deleteRow = await Task.destroy({
+    where: { id: taskId, user_id: userId },
+  });
+  if (deleteRow === 0) {
+    return null;
+  }
+  return deleteRow;
+};
+
 module.exports = {
   getAllTasks,
   getTasksByUserId,
   updateTaskStatus,
   updateTask,
+  deleteOneTask,
 };

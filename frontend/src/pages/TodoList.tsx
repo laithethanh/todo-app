@@ -11,12 +11,15 @@ import { TodoResponse as Todo } from "../types";
 import todoService from "../services/todoService";
 // import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import ConfirmModal from "../components/common/ConfirmModal";
 
 export default function TodoList() {
   // const [searchParams, setSearchParams] = useSearchParams();
   // console.log(searchParams);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
 
   const [filter, setFilter] = useState("all");
 
@@ -56,6 +59,24 @@ export default function TodoList() {
 
     fetchTasks();
   }, []);
+
+  const confirmDeleteAction = async () => {
+    if (!selectedTodoId) return;
+
+    try {
+      await todoService.deleteOneTask({ id: selectedTodoId });
+      setTodos((prev) => prev.filter((todo) => todo.id !== selectedTodoId));
+      // Không nên dùng reload thế này vì sẽ mất toast và màn hình sẽ bị giật, hiện loading
+      // window.location.reload()
+      toast.success("Xóa công việc thành công!");
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      toast.error("Có lỗi xảy ra khi xóa công việc!");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedTodoId(null);
+    }
+  };
 
   // toggle done
   const toggleTodo = async (id: number) => {
@@ -145,7 +166,8 @@ export default function TodoList() {
 
   // delete todo
   const deleteTodo = (id: number) => {
-    setTodos((prev) => prev.filter((todo) => todo.id !== id));
+    setSelectedTodoId(id);
+    setIsDeleteModalOpen(true);
   };
 
   // filter logic
@@ -439,6 +461,17 @@ export default function TodoList() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        title="Xác nhận xóa"
+        message="Bạn có chắc chắn muốn xóa công việc này không?"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedTodoId(null);
+        }}
+      />
     </div>
   );
 }

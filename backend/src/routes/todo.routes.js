@@ -3,7 +3,8 @@ const {
   getAllTasks,
   getAllTasksById,
   updateTaskStatus,
-  updateTask
+  updateTask,
+  deleteOneTask
 } = require("../controllers/todoController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -14,6 +15,6 @@ router.get("/me", authMiddleware, getAllTasksById);
 router.patch("/:id/status", authMiddleware, updateTaskStatus);
 router.patch("/:id", authMiddleware, updateTask);
 // router.put("/:id", authMiddleware, putEditOneTask);
-// router.delete("/:id", authMiddleware, deleteOneTask);
+router.delete("/:id", authMiddleware, deleteOneTask);
 
 module.exports = router;

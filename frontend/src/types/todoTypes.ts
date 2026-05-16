@@ -17,3 +17,11 @@ export interface UpdateTaskRequest {
   id: number;
   data: Partial<TodoResponse>;
 }
+
+export interface DeleteRequest {
+  id: number;
+}
+
+export interface DeleteResponse {
+  message: string;
+}
