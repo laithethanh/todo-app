@@ -10,7 +10,7 @@ export interface TodoResponse {
 
 export interface UpdateStatusRequest {
   id: number;
-  status: string;
+  status: "todo" | "done";
 }
 
 export interface UpdateTaskRequest {
@@ -24,4 +24,11 @@ export interface DeleteRequest {
 
 export interface DeleteResponse {
   message: string;
+}
+
+export interface CreateRequest {
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high";
+  deadline: string;
 }

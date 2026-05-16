@@ -107,10 +107,41 @@ const deleteOneTask = async (req, res, next) => {
   }
 };
 
+const postCreateOneTask = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { title, description, priority, deadline } = req.body;
+    if (!title || !priority || !deadline) {
+      return next(
+        createHttpError(400, "Dữ liệu truyền vào không hợp lệ hoặc thiếu!"),
+      );
+    }
+    if (isNaN(new Date(deadline).getTime())) {
+      return next(createHttpError(400, "Ngày đến hạn không hợp lệ!"));
+    }
+    if (new Date(deadline) <= new Date()) {
+      return next(
+        createHttpError(400, "Ngày đến hạn không được nhỏ hơn hiện tại!"),
+      );
+    }
+    const newTask = await todoService.postCreateOneTask(userId, {
+      title,
+      description,
+      status: "todo", // Ép trạng thái luôn là 'todo' khi tạo mới theo yêu cầu nghiệp vụ
+      priority,
+      deadline,
+    });
+    return res.status(201).json(newTask);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   getAllTasks,
   getAllTasksById,
   updateTaskStatus,
   updateTask,
   deleteOneTask,
+  postCreateOneTask,
 };

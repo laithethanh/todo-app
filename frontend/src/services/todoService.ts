@@ -4,6 +4,7 @@ import {
   UpdateTaskRequest,
   DeleteRequest,
   DeleteResponse,
+  CreateRequest,
 } from "../types";
 import api from "./api";
 
@@ -36,6 +37,10 @@ export const todoService = {
   },
   deleteOneTask: async ({ id }: DeleteRequest): Promise<DeleteResponse> => {
     const res = await api.delete<DeleteResponse>(`/todos/${id}`);
+    return res.data;
+  },
+  postCreateOneTask: async (data: CreateRequest): Promise<TodoResponse> => {
+    const res = await api.post<TodoResponse>("/todos", data);
     return res.data;
   },
 };

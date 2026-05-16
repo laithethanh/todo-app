@@ -76,6 +76,14 @@ export default function HeaderLayout() {
               <FaUser />
             </div>
 
+            {/* Backdrop làm mờ background và xử lý click outside */}
+            {showProfileMenu && (
+              <div
+                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[4px] cursor-default"
+                onClick={() => setShowProfileMenu(false)}
+              />
+            )}
+
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-xl py-2 z-50">
                 <div className="px-4 py-2 border-b dark:border-gray-700">

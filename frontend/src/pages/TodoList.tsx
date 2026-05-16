@@ -7,7 +7,7 @@ import {
   FaEdit,
   FaTimes,
 } from "react-icons/fa";
-import { TodoResponse as Todo } from "../types";
+import { CreateRequest, TodoResponse as Todo } from "../types";
 import todoService from "../services/todoService";
 // import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -20,6 +20,15 @@ export default function TodoList() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
+
+  // State cho việc thêm mới task
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState<CreateRequest>({
+    title: "",
+    description: "",
+    priority: "medium",
+    deadline: "",
+  });
 
   const [filter, setFilter] = useState("all");
 
@@ -126,6 +135,46 @@ export default function TodoList() {
     setIsEditModalOpen(true);
   };
 
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!addForm.title.trim()) {
+      toast.error("Tiêu đề công việc không được để trống!");
+      return;
+    }
+
+    // 2. Validate hạn chót
+    if (!addForm.deadline) {
+      toast.error("Vui lòng chọn hạn chót cho công việc!");
+      return;
+    }
+
+    const deadlineDate = new Date(addForm.deadline);
+    if (deadlineDate <= new Date()) {
+      toast.error(
+        "Hạn chót (ngày và giờ) không được sớm hơn thời điểm hiện tại!",
+      );
+      return;
+    }
+
+    try {
+      const newTodo = await todoService.postCreateOneTask(addForm);
+      setTodos((prev) => [newTodo, ...prev]);
+      toast.success("Thêm công việc thành công!");
+      setIsAddModalOpen(false);
+      // Reset form sau khi thêm thành công
+      setAddForm({
+        title: "",
+        description: "",
+        priority: "medium",
+        deadline: "",
+      });
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      toast.error("Thêm công việc thất bại!");
+    }
+  };
+
   const handleUpdateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTodo) return;
@@ -142,7 +191,12 @@ export default function TodoList() {
       const createdAtDate = new Date(editingTodo.created_at);
       if (deadlineDate < createdAtDate) {
         toast.error(
-          "Hạn chót (ngày và giờ) không được sớm hơn ngày tạo công việc!",
+          "Hạn chót (ngày và giờ) không được sớm hơn thời điểm tạo công việc!",
+        );
+        return;
+      } else if (deadlineDate <= new Date()) {
+        toast.error(
+          "Hạn chót (ngày và giờ) không được sớm hơn thời điểm hiện tại!",
         );
         return;
       }
@@ -175,7 +229,8 @@ export default function TodoList() {
     if (filter === "active") return todo.status === "todo";
     if (filter === "completed") return todo.status === "done";
     return true;
-  });
+  })
+  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -198,7 +253,10 @@ export default function TodoList() {
           My Tasks
         </h1>
 
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm active:scale-95"
+        >
           + Add Task
         </button>
       </div>
@@ -364,9 +422,108 @@ export default function TodoList() {
           ))}
       </div>
 
+      {/* Modal Thêm Mới Task */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 border dark:border-gray-700">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Thêm công việc mới
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tiêu đề
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Học vibe coding thật vui..."
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={addForm.title}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, title: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mô tả
+                </label>
+                <textarea
+                  placeholder="Chi tiết công việc cần làm..."
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  rows={3}
+                  value={addForm.description}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, description: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Độ ưu tiên
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={addForm.priority}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        priority: e.target.value as "low" | "medium" | "high",
+                      })
+                    }
+                  >
+                    <option value="low">Thấp</option>
+                    <option value="medium">Trung bình</option>
+                    <option value="high">Cao</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Hạn chót
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={addForm.deadline}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, deadline: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Thêm mới
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal Chỉnh sửa Task */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 border dark:border-gray-700">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
