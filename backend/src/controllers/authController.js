@@ -61,6 +61,9 @@ const login = async (req, res, next) => {
       username: user.username,
     });
 
+    // Gán vào req.user (chỉ có tác dụng trong request hiện tại)
+    req.user = { id: user.id, username: user.username };
+
     return res.status(200).json({
       token,
       user: {

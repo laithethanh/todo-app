@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useLayoutEffect, ReactNode } from "react";
 import { AxiosError } from "axios";
 import {
   LoginRequest,
@@ -20,9 +20,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token"),
   );
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      try {
+        const decode: User = jwtDecode(savedToken);
+        // Kiểm tra thời gian hết hạn ngay lập tức
+        if (decode.exp * 1000 > Date.now()) {
+          return decode;
+        }
+      } catch (error) {
+        console.error("Invalid token on init:", error);
+      }
+    }
+    return null;
+  });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Cập nhật localStorage và class của document khi darkMode thay đổi
     localStorage.setItem("darkMode", darkMode);
     if (darkMode === "true") {

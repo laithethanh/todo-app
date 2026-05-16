@@ -5,7 +5,13 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useSearchParams,
+} from "react-router-dom";
 import HeaderLayout from "./components/layout/HeaderLayout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -17,13 +23,28 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Component xử lý chuyển hướng tại trang chủ (/) dựa trên trạng thái auth
 const HomeRedirect = () => {
   const { user } = useAuth();
-  return <Navigate to={user ? "/auth/todos" : "/login"} replace />;
+  const [searchParams] = useSearchParams();
+  const queryString = searchParams.toString()
+    ? `?${searchParams.toString()}`
+    : "";
+  return (
+    <Navigate to={user ? `/auth/todos${queryString}` : "/login"} replace />
+  );
 };
 
 // Component ngăn người dùng đã đăng nhập truy cập lại trang Login/Register
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  return user ? <Navigate to="/auth/todos" replace /> : <>{children}</>;
+  const [searchParams] = useSearchParams();
+  const queryString = searchParams.toString()
+    ? `?${searchParams.toString()}`
+    : "";
+
+  return user ? (
+    <Navigate to={`/auth/todos${queryString}`} replace />
+  ) : (
+    <>{children}</>
+  );
 };
 
 const AppContent = () => {

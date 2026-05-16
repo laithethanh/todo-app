@@ -8,6 +8,7 @@ const { connectDB, sequelize } = require("./src/config/db");
 const { getVietnamTimeISO } = require("./src/utils/time");
 const errorHandler = require("./src/middlewares/errorHandler");
 const authRoutes = require("./src/routes/auth.routes");
+const todoRoutes = require("./src/routes/todo.routes");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -35,6 +36,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/todos", todoRoutes);
 
 app.use(errorHandler);
 
