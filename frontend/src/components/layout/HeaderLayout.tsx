@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import ConfirmModal from "../common/ConfirmModal";
 import { FaSun, FaMoon, FaUser } from "react-icons/fa";
@@ -30,7 +30,13 @@ export default function HeaderLayout() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <header className="w-full bg-white dark:bg-gray-900 shadow-md px-6 py-3 flex items-center justify-between">
         {/* Logo */}
-        <div className="text-xl font-bold text-blue-600">TodoApp</div>
+        <Link
+          to="/auth/todos"
+          reloadDocument
+          className="text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          TodoApp
+        </Link>
 
         {/* Search */}
         <div className="flex-1 mx-6">
