@@ -62,9 +62,9 @@ const updateTaskStatus = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, deadline } = req.body;
+    const { title, description, priority, deadline, tags } = req.body;
     const userId = req.user.id;
-    if (!title || !priority || !deadline) {
+    if (!title || !priority || !deadline || tags.length === 0) {
       return next(
         createHttpError(400, "Dữ liệu truyền vào không hợp lệ hoặc thiếu!"),
       );
@@ -74,6 +74,7 @@ const updateTask = async (req, res, next) => {
       description,
       priority,
       deadline,
+      tags,
     });
     if (!update) {
       return next(
@@ -110,8 +111,8 @@ const deleteOneTask = async (req, res, next) => {
 const postCreateOneTask = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { title, description, priority, deadline } = req.body;
-    if (!title || !priority || !deadline) {
+    const { title, description, priority, deadline, tags } = req.body;
+    if (!title || !priority || !deadline || tags.length === 0) {
       return next(
         createHttpError(400, "Dữ liệu truyền vào không hợp lệ hoặc thiếu!"),
       );
@@ -130,6 +131,7 @@ const postCreateOneTask = async (req, res, next) => {
       status: "todo", // Ép trạng thái luôn là 'todo' khi tạo mới theo yêu cầu nghiệp vụ
       priority,
       deadline,
+      tags,
     });
     return res.status(201).json(newTask);
   } catch (error) {

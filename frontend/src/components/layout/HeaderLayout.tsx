@@ -36,7 +36,7 @@ export default function HeaderLayout() {
         <div className="flex-1 mx-6">
           <input
             type="text"
-            placeholder="Search tasks..."
+            placeholder="Search tasks by title..."
             className="w-full px-4 py-2 border rounded-lg 
                      focus:outline-none focus:ring-2 focus:ring-blue-500
                      dark:bg-gray-800 dark:border-gray-700 dark:text-white"

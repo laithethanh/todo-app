@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(decode); // Token còn hạn, trả về user
         } else {
           toast.warn(
-            "Phiên đăng nhập của bạn đã kết thúc. Vui lòng đăng nhập lại.",
+            "Phiên đăng nhập của bạn đã kết thúc. Vui lòng đăng nhập lại để tiếp tục.",
           );
           localStorage.removeItem("token");
         }

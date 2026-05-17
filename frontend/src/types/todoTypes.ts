@@ -1,3 +1,8 @@
+export interface Tag {
+  id: number;
+  name: string;
+}
+
 export interface TodoResponse {
   id: number;
   title: string;
@@ -6,6 +11,11 @@ export interface TodoResponse {
   priority: "low" | "medium" | "high";
   created_at: string;
   deadline?: string;
+  // tags: {
+  //   id: number;
+  //   name: string;
+  // }[];
+  tags: Tag[];
 }
 
 export interface UpdateStatusRequest {
@@ -15,7 +25,7 @@ export interface UpdateStatusRequest {
 
 export interface UpdateTaskRequest {
   id: number;
-  data: Partial<TodoResponse>;
+  data: CreateRequest;
 }
 
 export interface DeleteRequest {
@@ -31,4 +41,5 @@ export interface CreateRequest {
   description: string;
   priority: "low" | "medium" | "high";
   deadline: string;
+  tags?: number[]; // Tags are sent as an array of IDs
 }

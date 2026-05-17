@@ -13,6 +13,7 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   try {
+    // hàm verify này khác decode phía fe là nó có check exp xem còn hạn hay không
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // Lưu id và username vào req.user cho các controller phía sau
     next();

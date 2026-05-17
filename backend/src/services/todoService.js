@@ -1,12 +1,28 @@
-const { Task } = require("../models");
+const { Task, Tag } = require("../models");
+const { sequelize } = require("../config/db");
 
 const getAllTasks = async () => {
-  return Task.findAll();
+  return Task.findAll({
+    include: [
+      {
+        model: Tag,
+        as: "tags",
+        through: { attributes: [] }, // Ẩn các cột của bảng trung gian task_tags
+      },
+    ],
+  });
 };
 
 const getTasksByUserId = async (userId) => {
   return Task.findAll({
     where: { user_id: userId },
+    include: [
+      {
+        model: Tag,
+        as: "tags",
+        through: { attributes: [] }, // Ẩn các cột của bảng trung gian task_tags
+      },
+    ],
     // order: [["created_at", "desc"]],
   });
 };
@@ -23,23 +39,50 @@ const updateTaskStatus = async (taskId, userId, status) => {
   task.status = status;
   await task.save();
 
-  return task;
+  return task.reload({
+    include: [{ model: Tag, as: "tags", through: { attributes: [] } }],
+  });
 };
 
 const updateTask = async (taskId, userId, data) => {
-  const task = await Task.findOne({
-    where: { id: taskId, user_id: userId },
-  });
+  const t = await sequelize.transaction();
+  try {
+    const task = await Task.findOne({
+      where: { id: taskId, user_id: userId },
+      transaction: t,
+    });
 
-  if (!task) {
-    return null;
+    if (!task) {
+      await t.rollback();
+      return null;
+    }
+
+    const { tags, ...taskData } = data;
+
+    // Kiểm tra tính hợp lệ của tags nếu có
+    if (tags && tags.length > 0) {
+      const uniqueTags = [...new Set(tags)];
+      const foundTags = await Tag.findAll({
+        where: { id: uniqueTags },
+        transaction: t,
+      });
+      if (foundTags.length !== uniqueTags.length) {
+        throw new Error("Một hoặc nhiều Tag không tồn tại trên hệ thống.");
+      }
+      await task.setTags(uniqueTags, { transaction: t });
+    }
+
+    Object.assign(task, taskData);
+    await task.save({ transaction: t });
+
+    await t.commit();
+    return task.reload({
+      include: [{ model: Tag, as: "tags", through: { attributes: [] } }],
+    });
+  } catch (error) {
+    await t.rollback();
+    throw error;
   }
-
-  // Cập nhật các trường thông tin từ data
-  Object.assign(task, data);
-  await task.save();
-
-  return task;
 };
 
 const deleteOneTask = async (taskId, userId) => {
@@ -53,32 +96,49 @@ const deleteOneTask = async (taskId, userId) => {
 };
 
 const postCreateOneTask = async (userId, data) => {
-  const newTask = await Task.create({
-    // nếu làm thế này { data, userId }
-    // => {
-    //   "data": { "title": "...", "description": "..." }, // DB không hiểu cột "data" là gì
-    //   "userId": 10
-    // }
-    ...data,
-    user_id: userId,
-    // {
-    //   "title": "...",
-    //   "description": "...",
-    //   "status": "...",
-    //   "priority": "...",
-    //   "deadline": "...",
-    //   "user_id": 10 // DB nhận diện được chuẩn đét tất cả các cột!
-    // }
-  });
-  // const newTask = await Task.create(
-  //   {
-  //     data,
-  //     userId: userId,
-  //   },
-  //   { fields: ["title", "description", "priority", "deadline", "status"] },
-  // );
-  // fields để chỉ định nghiêm ngặt những trường nào được phép lọt vào database
-  return newTask;
+  const { tags, ...taskData } = data;
+
+  // Khởi tạo một transaction
+  const t = await sequelize.transaction();
+
+  try {
+    // 1. Kiểm tra tính hợp lệ của tất cả Tag ID trước khi tạo Task
+    if (tags && tags.length > 0) {
+      const uniqueTags = [...new Set(tags)]; // Loại bỏ ID trùng lặp nếu có
+      const foundTags = await Tag.findAll({
+        where: { id: uniqueTags },
+        transaction: t,
+      });
+
+      if (foundTags.length !== uniqueTags.length) {
+        throw new Error("Một hoặc nhiều Tag không tồn tại trên hệ thống.");
+      }
+    }
+
+    // 2. Tạo Task mới trong transaction
+    const newTask = await Task.create(
+      { ...taskData, user_id: userId },
+      { transaction: t },
+    );
+
+    // 3. Gắn tags trong transaction
+    if (tags && tags.length > 0) {
+      const uniqueTags = [...new Set(tags)];
+      await newTask.setTags(uniqueTags, { transaction: t });
+    }
+
+    // Nếu mọi thứ ổn, xác nhận lưu thay đổi vào DB
+    await t.commit();
+
+    // Trả về dữ liệu đã load kèm tags
+    return newTask.reload({
+      include: [{ model: Tag, as: "tags", through: { attributes: [] } }],
+    });
+  } catch (error) {
+    // Nếu có lỗi, hoàn tác mọi thay đổi (Task sẽ không được tạo)
+    await t.rollback();
+    throw error;
+  }
 };
 
 module.exports = {
