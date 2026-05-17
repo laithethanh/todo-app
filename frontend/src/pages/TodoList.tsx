@@ -258,10 +258,22 @@ export default function TodoList() {
           return (
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           );
-        case "priority-asc":
-          return priorityMap[a.priority] - priorityMap[b.priority];
-        case "priority-desc":
-          return priorityMap[b.priority] - priorityMap[a.priority];
+        case "priority-asc": {
+          const pDiff = priorityMap[a.priority] - priorityMap[b.priority];
+          if (pDiff !== 0) return pDiff;
+          // Nếu cùng độ ưu tiên, cái nào mới hơn (created_at lớn hơn) thì lên trước
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        }
+        case "priority-desc": {
+          const pDiff = priorityMap[b.priority] - priorityMap[a.priority];
+          if (pDiff !== 0) return pDiff;
+          // Nếu cùng độ ưu tiên, cái nào mới hơn (created_at lớn hơn) thì lên trước
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        }
         case "newest":
         default:
           return (
