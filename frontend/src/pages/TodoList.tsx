@@ -34,6 +34,7 @@ export default function TodoList() {
   });
 
   const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   // State cho việc chỉnh sửa task
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -243,16 +244,31 @@ export default function TodoList() {
   };
 
   // filter logic
+  const priorityMap: Record<string, number> = { low: 1, medium: 2, high: 3 };
+
   const filteredTodos = todos
     .filter((todo) => {
       if (filter === "active") return todo.status === "todo";
       if (filter === "completed") return todo.status === "done";
       return true;
     })
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        case "priority-asc":
+          return priorityMap[a.priority] - priorityMap[b.priority];
+        case "priority-desc":
+          return priorityMap[b.priority] - priorityMap[a.priority];
+        case "newest":
+        default:
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+      }
+    });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -340,40 +356,58 @@ export default function TodoList() {
           </button>
         </div>
 
-        {/* Status Filter */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1 rounded ${
-              filter === "all"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-            }`}
-          >
-            All
-          </button>
+        {/* Status Filter & Sort */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-3 py-1 rounded ${
+                filter === "all"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+              }`}
+            >
+              All
+            </button>
 
-          <button
-            onClick={() => setFilter("active")}
-            className={`px-3 py-1 rounded ${
-              filter === "active"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-            }`}
-          >
-            Active
-          </button>
+            <button
+              onClick={() => setFilter("active")}
+              className={`px-3 py-1 rounded ${
+                filter === "active"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+              }`}
+            >
+              Active
+            </button>
 
-          <button
-            onClick={() => setFilter("completed")}
-            className={`px-3 py-1 rounded ${
-              filter === "completed"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-            }`}
-          >
-            Completed
-          </button>
+            <button
+              onClick={() => setFilter("completed")}
+              className={`px-3 py-1 rounded ${
+                filter === "completed"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+              }`}
+            >
+              Completed
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-base font-medium text-gray-700 dark:text-gray-300">
+              Sắp xếp:
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm cursor-pointer shadow-sm"
+            >
+              <option value="newest">Mới nhất (Ngày tạo)</option>
+              <option value="oldest">Cũ nhất (Ngày tạo)</option>
+              <option value="priority-desc">Ưu tiên: Cao - Thấp</option>
+              <option value="priority-asc">Ưu tiên: Thấp - Cao</option>
+            </select>
+          </div>
         </div>
 
         {/* Todo List */}
