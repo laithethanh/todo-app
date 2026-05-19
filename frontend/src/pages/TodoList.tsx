@@ -7,16 +7,63 @@ import {
   FaEdit,
   FaTimes,
 } from "react-icons/fa";
-import { CreateRequest, TodoResponse as Todo, Tag } from "../types";
+import {
+  CreateRequest,
+  TodoResponse as Todo,
+  Tag,
+  QueryFilters,
+} from "../types";
 import todoService from "../services/todoService";
 import tagService from "../services/tagService";
-// import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
+import { useAuth } from "../hooks/useAuth";
 
 export default function TodoList() {
-  // const [searchParams, setSearchParams] = useSearchParams();
-  // console.log(searchParams);
+  // Lọc tasks theo title, tags, priority: có 2 cách
+  // cách 1: không gọi api mà lọc từ dánh sách todos đã được lấy từ db lần đầu
+  // cách 2: gọi api => phần sau đây sẽ làm theo cách 2
+  const { title, setTitle } = useAuth();
+  const [queryFilters, setQueryFilters] = useState<QueryFilters>({
+    tags: [],
+    priorities: [],
+  });
+  const handleChangeTags = (tag: number) => {
+    setQueryFilters((prev) => {
+      const exists = prev.tags.includes(tag);
+      return {
+        ...prev,
+        tags: exists ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
+      };
+    });
+  };
+  const handleChangePriority = (priority: string) => {
+    setQueryFilters((prev) => {
+      const exists = prev.priorities.includes(priority);
+      return {
+        ...prev,
+        priorities: exists
+          ? prev.priorities.filter((p) => p !== priority)
+          : [...prev.priorities, priority],
+      };
+    });
+  };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Cập nhật url khi query filter thay đổi
+  useEffect(() => {
+    const updateUrl = () => {
+      const param = new URLSearchParams();
+      if (title.trim()) param.set("title", title.trim());
+      queryFilters.tags.forEach((tag) => param.append("tag", tag.toString()));
+      queryFilters.priorities.forEach((p) => param.append("priority", p));
+      setSearchParams(param);
+    };
+    updateUrl();
+  }, [queryFilters, title]);
+
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
@@ -51,11 +98,28 @@ export default function TodoList() {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
+        
+        // 1. Đọc dữ liệu trực tiếp từ URL thay vì từ State
+        const urlTitle = searchParams.get("title") || "";
+        const urlTags = searchParams.getAll("tag");
+        const urlPriorities = searchParams.getAll("priority");
+
+        // 2. Đồng bộ ngược lại State để các checkbox/search bar trên UI hiển thị đúng
+        if (urlTitle !== title) setTitle(urlTitle);
+        setQueryFilters({
+          tags: urlTags.map((t) => Number(t)),
+          priorities: urlPriorities,
+        });
+
+        // 3. Xây dựng query string "sạch" để gửi lên API
+        const cleanQuery = new URLSearchParams();
+        if (urlTitle.trim()) cleanQuery.set("title", urlTitle.trim());
+        urlTags.forEach((t) => cleanQuery.append("tag", t));
+        urlPriorities.forEach((p) => cleanQuery.append("priority", p));
 
         // Gọi song song cả tasks và tags từ backend
-        // Lưu ý: Đảm bảo baseURL của axios đã được cấu hình trỏ đến backend
         const [tasksData, tagsRes] = await Promise.all([
-          todoService.getAllTasksById().catch(() => []), // Trả về mảng rỗng nếu lỗi
+          todoService.getAllTasksById(cleanQuery.toString()).catch(() => []), 
           tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
         ]);
 
@@ -73,7 +137,7 @@ export default function TodoList() {
     };
 
     fetchInitialData();
-  }, []); // Chỉ nên gọi một lần khi mount để tránh loop hoặc refetch không cần thiết
+  }, [searchParams]); // Quan trọng: Fetch lại mỗi khi URL thay đổi
 
   const confirmDeleteAction = async () => {
     if (!selectedTodoId) return;
@@ -172,7 +236,18 @@ export default function TodoList() {
 
     try {
       const newTodo = await todoService.postCreateOneTask(addForm);
-      setTodos((prev) => [newTodo, ...prev]);
+
+      // Kiểm tra xem task mới có khớp với các bộ lọc hiện tại không (Title, Tags, Priority)
+      const matchesTitle = !title.trim() || newTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      const matchesTags = queryFilters.tags.length === 0 || 
+                          (newTodo.tags && newTodo.tags.some(t => queryFilters.tags.includes(t.id)));
+      const matchesPriority = queryFilters.priorities.length === 0 || 
+                              queryFilters.priorities.includes(newTodo.priority);
+
+      if (matchesTitle && matchesTags && matchesPriority) {
+        setTodos((prev) => [newTodo, ...prev]);
+      }
+
       toast.success("Thêm công việc thành công!");
       setIsAddModalOpen(false);
       // Reset form sau khi thêm thành công
@@ -226,9 +301,23 @@ export default function TodoList() {
         id: editingTodo.id,
         data: editForm,
       });
-      setTodos((prev) =>
-        prev.map((t) => (t.id === editingTodo.id ? updatedTodo : t)),
-      );
+
+      // Kiểm tra xem task sau khi cập nhật có còn khớp với các bộ lọc hiện tại không
+      const matchesTitle = !title.trim() || updatedTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      const matchesTags = queryFilters.tags.length === 0 || 
+                          (updatedTodo.tags && updatedTodo.tags.some(t => queryFilters.tags.includes(t.id)));
+      const matchesPriority = queryFilters.priorities.length === 0 || 
+                              queryFilters.priorities.includes(updatedTodo.priority);
+
+      if (matchesTitle && matchesTags && matchesPriority) {
+        setTodos((prev) =>
+          prev.map((t) => (t.id === editingTodo.id ? updatedTodo : t)),
+        );
+      } else {
+        // Nếu không còn khớp với bộ lọc thì xóa khỏi danh sách hiển thị
+        setTodos((prev) => prev.filter((t) => t.id !== editingTodo.id));
+      }
+
       toast.success("Cập nhật công việc thành công!");
       setIsEditModalOpen(false);
     } catch (error) {
@@ -316,6 +405,8 @@ export default function TodoList() {
                   className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                   <input
+                    checked={queryFilters.tags.includes(tag.id)}
+                    onChange={() => handleChangeTags(tag.id)}
                     type="checkbox"
                     className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
                   />
@@ -341,6 +432,8 @@ export default function TodoList() {
                   className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                   <input
+                    checked={queryFilters.priorities.includes(p.value)}
+                    onChange={() => handleChangePriority(p.value)}
                     type="checkbox"
                     className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
                   />

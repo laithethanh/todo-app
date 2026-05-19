@@ -8,7 +8,7 @@ export default function HeaderLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState<boolean>(false);
 
-  const { user, logout, darkMode, setDarkMode } = useAuth();
+  const { user, logout, darkMode, setDarkMode, title, setTitle } = useAuth();
   const navigate = useNavigate();
 
   const toggleDarkMode = () => {
@@ -24,6 +24,10 @@ export default function HeaderLayout() {
     logout();
     navigate("/login");
     setIsLogoutModalOpen(false);
+  };
+
+  const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
   };
 
   return (
@@ -42,6 +46,8 @@ export default function HeaderLayout() {
         <div className="flex-1 mx-6">
           <input
             type="text"
+            value={title}
+            onChange={handleChangeTitle}
             placeholder="Search tasks by title..."
             className="w-full px-4 py-2 border rounded-lg 
                      focus:outline-none focus:ring-2 focus:ring-blue-500

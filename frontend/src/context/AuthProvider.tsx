@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     return null;
   });
+  const [title, setTitle] = useState<string>("");
 
   useLayoutEffect(() => {
     // Cập nhật localStorage và class của document khi darkMode thay đổi
@@ -118,6 +119,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider
       value={{
+        title,
+        setTitle,
         darkMode,
         setDarkMode,
         user,

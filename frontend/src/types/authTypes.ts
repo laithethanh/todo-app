@@ -26,6 +26,8 @@ export interface RegisterResponse {
 }
 
 export interface AuthContextType {
+  title: string;
+  setTitle: React.Dispatch<React.SetStateAction<string>>;
   darkMode: string;
   setDarkMode: React.Dispatch<React.SetStateAction<string>>;
   user: User | null;

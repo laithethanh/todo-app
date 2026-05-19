@@ -13,8 +13,8 @@ export const todoService = {
     const res = await api.get<TodoResponse[]>("/todos");
     return res.data;
   },
-  getAllTasksById: async (): Promise<TodoResponse[]> => {
-    const res = await api.get<TodoResponse[]>("/todos/me");
+  getAllTasksById: async (query: string): Promise<TodoResponse[]> => {
+    const res = await api.get<TodoResponse[]>(`/todos/me?${query}`);
     return res.data;
   },
 

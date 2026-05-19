@@ -1,5 +1,6 @@
 const { Task, Tag } = require("../models");
 const { sequelize } = require("../config/db");
+const { Op } = require("sequelize");
 
 const getAllTasks = async () => {
   return Task.findAll({
@@ -13,16 +14,41 @@ const getAllTasks = async () => {
   });
 };
 
-const getTasksByUserId = async (userId) => {
+const getTasksByUserId = async (userId, { title, tag, priority }) => {
+  const filter = {};
+  filter.user_id = userId;
+  if (title) filter.title = { [Op.like]: `%${title}%` };
+  if (priority)
+    filter.priority = {
+      [Op.in]: Array.isArray(priority) ? priority : [priority],
+    };
+
+  // This include is to fetch ALL tags for the matching tasks
+  const includeOptions = [
+    {
+      model: Tag,
+      as: "tags",
+      through: { attributes: [] },
+    },
+  ];
+
+  // If tag is provided, we need to filter tasks that have these tags.
+  // This is done by adding a subquery to the main `where` clause of the Task model,
+  // ensuring that the Task has at least one of the specified tags.
+  // The `includeOptions` will then fetch all tags for the tasks that pass this filter.
+  if (tag) {
+    const tagIds = Array.isArray(tag) ? tag : [tag];
+    // Construct the SQL for the EXISTS subquery to filter tasks by associated tags
+    const tagExistsSubquery = `EXISTS (SELECT 1 FROM task_tags WHERE task_tags.task_id = Task.id AND task_tags.tag_id IN (${tagIds.join(",")}))`;
+    if (!filter[Op.and]) {
+      filter[Op.and] = [];
+    }
+    filter[Op.and].push(sequelize.literal(tagExistsSubquery));
+  }
+
   return Task.findAll({
-    where: { user_id: userId },
-    include: [
-      {
-        model: Tag,
-        as: "tags",
-        through: { attributes: [] }, // Ẩn các cột của bảng trung gian task_tags
-      },
-    ],
+    where: filter,
+    include: includeOptions,
     // order: [["created_at", "desc"]],
   });
 };
