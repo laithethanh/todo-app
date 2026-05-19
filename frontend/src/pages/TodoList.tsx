@@ -18,20 +18,39 @@ import tagService from "../services/tagService";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
+import ReactPaginate from "react-paginate";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 
 export default function TodoList() {
-  // Lọc tasks theo title, tags, priority: có 2 cách
-  // cách 1: không gọi api mà lọc từ dánh sách todos đã được lấy từ db lần đầu
-  // cách 2: gọi api => phần sau đây sẽ làm theo cách 2
   const { title, setTitle } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const [filter, setFilter] = useState<string>(
+    () => searchParams.get("status") || "all",
+  );
+  const [sortBy, setSortBy] = useState<string>(
+    () => searchParams.get("sortBy") || "newest",
+  );
+
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    totalItems: 0,
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  const isFirstRender = useRef(true);
 
   const [queryFilters, setQueryFilters] = useState<QueryFilters>(() => ({
     tags: searchParams.getAll("tag").map(Number),
     priorities: searchParams.getAll("priority"),
   }));
+  const currentPage = parseInt(searchParams.get("page") || "1");
+
   const handleChangeTags = (tag: number) => {
     setQueryFilters((prev) => {
       const exists = prev.tags.includes(tag);
@@ -56,7 +75,6 @@ export default function TodoList() {
   // Áp dụng debounce cho title và bộ lọc
   const debouncedTitle = useDebounce(title, 500);
   const debouncedQueryFilters = useDebounce(queryFilters, 500);
-  const isFirstRender = useRef(true);
 
   // Cập nhật url khi query filter thay đổi
   useEffect(() => {
@@ -66,28 +84,64 @@ export default function TodoList() {
       return;
     }
 
-    const updateUrl = () => {
-      const param = new URLSearchParams();
-      if (debouncedTitle.trim()) param.set("title", debouncedTitle.trim());
-      debouncedQueryFilters.tags.forEach((tag) =>
-        param.append("tag", tag.toString()),
-      );
-      debouncedQueryFilters.priorities.forEach((p) =>
-        param.append("priority", p),
-      );
+    const params = new URLSearchParams(searchParams);
+    let isFilterChanged = false;
 
-      if (param.toString() !== searchParams.toString()) {
-        setSearchParams(param);
-      }
-    };
-    updateUrl();
-  }, [debouncedQueryFilters, debouncedTitle, setSearchParams, searchParams]);
+    // 1. Kiểm tra thay đổi Title (Search)
+    const currentTitle = params.get("title") || "";
+    if (currentTitle !== debouncedTitle.trim()) {
+      if (debouncedTitle.trim()) params.set("title", debouncedTitle.trim());
+      else params.delete("title");
+      isFilterChanged = true;
+    }
 
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+    // 2. Kiểm tra thay đổi Tags
+    const currentTags = params.getAll("tag").sort().join(",");
+    const newTags = [...debouncedQueryFilters.tags].sort().join(",");
+    if (currentTags !== newTags) {
+      params.delete("tag");
+      debouncedQueryFilters.tags.forEach((t) => params.append("tag", t.toString()));
+      isFilterChanged = true;
+    }
+
+    // 3. Kiểm tra thay đổi Priority
+    const currentPrio = params.getAll("priority").sort().join(",");
+    const newPrio = [...debouncedQueryFilters.priorities].sort().join(",");
+    if (currentPrio !== newPrio) {
+      params.delete("priority");
+      debouncedQueryFilters.priorities.forEach((p) => params.append("priority", p));
+      isFilterChanged = true;
+    }
+
+    // 4. Kiểm tra thay đổi Status Filter
+    const currentStatus = params.get("status") || "all";
+    if (currentStatus !== filter) {
+      if (filter !== "all") params.set("status", filter);
+      else params.delete("status");
+      isFilterChanged = true;
+    }
+
+    // 5. Kiểm tra thay đổi Sort
+    const currentSort = params.get("sortBy") || "newest";
+    if (currentSort !== sortBy) {
+      if (sortBy !== "newest") params.set("sortBy", sortBy);
+      else params.delete("sortBy");
+      isFilterChanged = true;
+    }
+
+    // CHỈ reset page về 1 nếu có bất kỳ bộ lọc nào ở trên thay đổi
+    if (isFilterChanged) {
+      params.set("page", "1");
+      setSearchParams(params);
+    }
+  }, [
+    debouncedQueryFilters,
+    debouncedTitle,
+    sortBy,
+    filter,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // State cho việc thêm mới task
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -98,9 +152,6 @@ export default function TodoList() {
     deadline: "",
     tags: [],
   });
-
-  const [filter, setFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<string>("newest");
 
   // State cho việc chỉnh sửa task
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -122,24 +173,42 @@ export default function TodoList() {
         const urlTitle = searchParams.get("title") || "";
         const urlTags = searchParams.getAll("tag");
         const urlPriorities = searchParams.getAll("priority");
+        const urlPage = searchParams.get("page") || "1";
+        const urlSortBy = searchParams.get("sortBy") || "newest";
+        const urlStatus = searchParams.get("status") || "all";
 
         // 2. Đồng bộ Title từ URL vào AuthContext (chỉ khi khác biệt)
         if (urlTitle !== title) setTitle(urlTitle);
+        if (urlSortBy !== sortBy) setSortBy(urlSortBy);
+        if (urlStatus !== filter) setFilter(urlStatus);
 
         // 3. Sử dụng trực tiếp searchParams hoặc xây dựng query string sạch
         const cleanQuery = new URLSearchParams();
         if (urlTitle.trim()) cleanQuery.set("title", urlTitle.trim());
         urlTags.forEach((t) => cleanQuery.append("tag", t));
         urlPriorities.forEach((p) => cleanQuery.append("priority", p));
+        cleanQuery.set("page", urlPage);
+        cleanQuery.set("sortBy", urlSortBy);
+        cleanQuery.set("status", urlStatus);
 
         const queryStr = cleanQuery.toString();
 
         const [tasksData, tagsRes] = await Promise.all([
-          todoService.getAllTasksById(queryStr).catch(() => []),
+          todoService.getAllTasksById(queryStr).catch(() => ({
+            tasks: [],
+            totalPages: 1,
+            totalItems: 0,
+            currentPage: 1,
+            itemPerPage: 0,
+          })),
           tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
         ]);
 
-        setTodos(Array.isArray(tasksData) ? tasksData : []);
+        setTodos(tasksData.tasks);
+        setPagination({
+          totalPages: tasksData.totalPages,
+          totalItems: tasksData.totalItems,
+        });
         setAvailableTags(Array.isArray(tagsRes) ? tagsRes : []);
       } catch (error) {
         const axiosError = error as AxiosError;
@@ -353,50 +422,19 @@ export default function TodoList() {
     }
   };
 
+  const handlePageChange = (selectedItem: { selected: number }) => {
+    const newPage = selectedItem.selected + 1;
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    setSearchParams(params);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // delete todo
   const deleteTodo = (id: number) => {
     setSelectedTodoId(id);
     setIsDeleteModalOpen(true);
   };
-
-  // filter logic
-  const priorityMap: Record<string, number> = { low: 1, medium: 2, high: 3 };
-
-  const filteredTodos = todos
-    .filter((todo) => {
-      if (filter === "active") return todo.status === "todo";
-      if (filter === "completed") return todo.status === "done";
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "oldest":
-          return (
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-        case "priority-asc": {
-          const pDiff = priorityMap[a.priority] - priorityMap[b.priority];
-          if (pDiff !== 0) return pDiff;
-          // Nếu cùng độ ưu tiên, cái nào mới hơn (created_at lớn hơn) thì lên trước
-          return (
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        }
-        case "priority-desc": {
-          const pDiff = priorityMap[b.priority] - priorityMap[a.priority];
-          if (pDiff !== 0) return pDiff;
-          // Nếu cùng độ ưu tiên, cái nào mới hơn (created_at lớn hơn) thì lên trước
-          return (
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        }
-        case "newest":
-        default:
-          return (
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-      }
-    });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -433,7 +471,9 @@ export default function TodoList() {
                 >
                   <input
                     checked={queryFilters.tags.includes(tag.id)}
-                    onChange={() => handleChangeTags(tag.id)}
+                    onChange={() => {
+                      handleChangeTags(tag.id);
+                    }}
                     type="checkbox"
                     className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
                   />
@@ -460,7 +500,9 @@ export default function TodoList() {
                 >
                   <input
                     checked={queryFilters.priorities.includes(p.value)}
-                    onChange={() => handleChangePriority(p.value)}
+                    onChange={() => {
+                      handleChangePriority(p.value);
+                    }}
                     type="checkbox"
                     className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
                   />
@@ -491,38 +533,25 @@ export default function TodoList() {
         {/* Status Filter & Sort */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex gap-2">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-3 py-1 rounded ${
-                filter === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-              }`}
-            >
-              All
-            </button>
-
-            <button
-              onClick={() => setFilter("active")}
-              className={`px-3 py-1 rounded ${
-                filter === "active"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-              }`}
-            >
-              Active
-            </button>
-
-            <button
-              onClick={() => setFilter("completed")}
-              className={`px-3 py-1 rounded ${
-                filter === "completed"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-              }`}
-            >
-              Completed
-            </button>
+            {[
+              { id: "all", label: "All" },
+              { id: "active", label: "Active" },
+              { id: "completed", label: "Completed" },
+            ].map((btn) => (
+              <button
+                key={btn.id}
+                onClick={() => {
+                  setFilter(btn.id);
+                }}
+                className={`px-3 py-1 rounded transition-colors ${
+                  filter === btn.id
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
           </div>
 
           <div className="flex items-center gap-2">
@@ -531,7 +560,9 @@ export default function TodoList() {
             </span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+              }}
               className="px-3 py-1.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm cursor-pointer shadow-sm"
             >
               <option value="newest">Mới nhất (Ngày tạo)</option>
@@ -550,12 +581,12 @@ export default function TodoList() {
             </div>
           )}
 
-          {!loading && filteredTodos.length === 0 && (
+          {!loading && todos.length === 0 && (
             <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
           )}
 
           {!loading &&
-            filteredTodos.map((todo) => (
+            todos.map((todo) => (
               <div
                 key={todo.id}
                 className="flex flex-col p-4 bg-white dark:bg-gray-800 shadow rounded-xl border dark:border-gray-700 transition-all duration-200 hover:shadow-md"
@@ -680,6 +711,33 @@ export default function TodoList() {
               </div>
             ))}
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && pagination.totalPages > 1 && (
+          <ReactPaginate
+            breakLabel="..."
+            nextLabel="Sau"
+            onPageChange={handlePageChange}
+            pageRangeDisplayed={3}
+            marginPagesDisplayed={2}
+            pageCount={pagination.totalPages}
+            previousLabel="Trước"
+            forcePage={currentPage - 1}
+            renderOnZeroPageCount={null}
+            containerClassName="flex items-center gap-2 justify-center mt-8 select-none"
+            pageClassName="w-10 h-10 rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+            pageLinkClassName="w-full h-full flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+            activeClassName="bg-blue-600 border-blue-600"
+            activeLinkClassName="text-white hover:bg-blue-600 dark:hover:bg-blue-600"
+            previousClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+            previousLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+            nextClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+            nextLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+            disabledClassName="opacity-50 cursor-not-allowed"
+            disabledLinkClassName="pointer-events-none"
+            breakClassName="w-10 h-10 flex items-center justify-center dark:text-gray-400"
+          />
+        )}
       </div>
 
       {/* Modal Thêm Mới Task */}

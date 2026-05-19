@@ -5,6 +5,7 @@ import {
   DeleteRequest,
   DeleteResponse,
   CreateRequest,
+  PaginatedTodoResponse,
 } from "../types";
 import api from "./api";
 
@@ -13,8 +14,8 @@ export const todoService = {
     const res = await api.get<TodoResponse[]>("/todos");
     return res.data;
   },
-  getAllTasksById: async (query: string): Promise<TodoResponse[]> => {
-    const res = await api.get<TodoResponse[]>(`/todos/me?${query}`);
+  getAllTasksById: async (query: string): Promise<PaginatedTodoResponse> => {
+    const res = await api.get<PaginatedTodoResponse>(`/todos/me?${query}`);
     return res.data;
   },
 

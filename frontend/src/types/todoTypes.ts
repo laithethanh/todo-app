@@ -18,6 +18,14 @@ export interface TodoResponse {
   tags: Tag[];
 }
 
+export interface PaginatedTodoResponse {
+  tasks: TodoResponse[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  itemPerPage: number;
+}
+
 export interface UpdateStatusRequest {
   id: number;
   status: "todo" | "done";

@@ -14,14 +14,49 @@ const getAllTasks = async () => {
   });
 };
 
-const getTasksByUserId = async (userId, { title, tag, priority }) => {
+const getTasksByUserId = async (
+  userId,
+  { title, tag, priority, page, sortBy, status },
+) => {
+  const limit = 4;
+  const currentPage = Math.max(1, parseInt(page) || 1);
+  const offset = (currentPage - 1) * limit;
   const filter = {};
   filter.user_id = userId;
   if (title) filter.title = { [Op.like]: `%${title}%` };
+
+  // Lọc theo trạng thái từ FE (active -> todo, completed -> done)
+  if (status && status !== "all") {
+    filter.status =
+      status === "active" ? "todo" : status === "completed" ? "done" : status;
+  }
+
   if (priority)
     filter.priority = {
       [Op.in]: Array.isArray(priority) ? priority : [priority],
     };
+
+  // Logic xử lý sắp xếp động
+  let orderClause = [["created_at", "desc"]]; // Mặc định
+  if (sortBy === "oldest") {
+    orderClause = [["created_at", "asc"]];
+  } else if (sortBy === "priority-desc") {
+    // Sequelize hỗ trợ sắp xếp theo field tùy chỉnh cho enum hoặc logic CASE WHEN
+    // Đơn giản nhất là sắp xếp theo field priority (giả sử db lưu đúng thứ tự chữ cái hoặc bạn dùng literal)
+    orderClause = [
+      sequelize.literal(
+        "CASE WHEN priority = 'high' THEN 1 WHEN priority = 'medium' THEN 2 ELSE 3 END ASC",
+      ),
+      ["created_at", "desc"],
+    ];
+  } else if (sortBy === "priority-asc") {
+    orderClause = [
+      sequelize.literal(
+        "CASE WHEN priority = 'high' THEN 3 WHEN priority = 'medium' THEN 2 ELSE 1 END ASC",
+      ),
+      ["created_at", "desc"],
+    ];
+  }
 
   // This include is to fetch ALL tags for the matching tasks
   const includeOptions = [
@@ -46,11 +81,22 @@ const getTasksByUserId = async (userId, { title, tag, priority }) => {
     filter[Op.and].push(sequelize.literal(tagExistsSubquery));
   }
 
-  return Task.findAll({
+  const { count, rows } = await Task.findAndCountAll({
     where: filter,
     include: includeOptions,
-    // order: [["created_at", "desc"]],
+    limit: limit,
+    offset: offset,
+    distinct: true,
+    order: orderClause,
   });
+
+  return {
+    tasks: rows,
+    totalItems: count,
+    totalPages: Math.ceil(count / limit),
+    currentPage,
+    itemPerPage: rows.length,
+  };
 };
 
 const updateTaskStatus = async (taskId, userId, status) => {

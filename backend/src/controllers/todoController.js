@@ -15,17 +15,20 @@ const getAllTasks = async (req, res, next) => {
 
 const getAllTasksById = async (req, res, next) => {
   try {
-    const { title, tag, priority } = req.query;
-    const userId = req.user.id; // Lấy từ authMiddleware
-    const tasks = await todoService.getTasksByUserId(userId, {
+    const { title, tag, priority, page, sortBy, status } = req.query;
+    const userId = req.user.id;
+    const result = await todoService.getTasksByUserId(userId, {
       title,
       tag,
       priority,
+      page,
+      sortBy,
+      status,
     });
-    if (!tasks || tasks.length === 0) {
+    if (!result.tasks || result.tasks.length === 0) {
       return next(createHttpError(404, "No tasks found for this user"));
     }
-    return res.status(200).json(tasks);
+    return res.status(200).json(result);
   } catch (error) {
     return next(error);
   }
