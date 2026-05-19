@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AxiosError } from "axios";
 import {
   FaTrash,
@@ -19,16 +19,19 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { useAuth } from "../hooks/useAuth";
+import { useDebounce } from "../hooks/useDebounce";
 
 export default function TodoList() {
   // Lọc tasks theo title, tags, priority: có 2 cách
   // cách 1: không gọi api mà lọc từ dánh sách todos đã được lấy từ db lần đầu
   // cách 2: gọi api => phần sau đây sẽ làm theo cách 2
   const { title, setTitle } = useAuth();
-  const [queryFilters, setQueryFilters] = useState<QueryFilters>({
-    tags: [],
-    priorities: [],
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [queryFilters, setQueryFilters] = useState<QueryFilters>(() => ({
+    tags: searchParams.getAll("tag").map(Number),
+    priorities: searchParams.getAll("priority"),
+  }));
   const handleChangeTags = (tag: number) => {
     setQueryFilters((prev) => {
       const exists = prev.tags.includes(tag);
@@ -50,19 +53,35 @@ export default function TodoList() {
     });
   };
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  // Áp dụng debounce cho title và bộ lọc
+  const debouncedTitle = useDebounce(title, 500);
+  const debouncedQueryFilters = useDebounce(queryFilters, 500);
+  const isFirstRender = useRef(true);
 
   // Cập nhật url khi query filter thay đổi
   useEffect(() => {
+    // Bỏ qua lần chạy đầu tiên để tránh việc state rỗng ghi đè lên URL có sẵn params
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     const updateUrl = () => {
       const param = new URLSearchParams();
-      if (title.trim()) param.set("title", title.trim());
-      queryFilters.tags.forEach((tag) => param.append("tag", tag.toString()));
-      queryFilters.priorities.forEach((p) => param.append("priority", p));
-      setSearchParams(param);
+      if (debouncedTitle.trim()) param.set("title", debouncedTitle.trim());
+      debouncedQueryFilters.tags.forEach((tag) =>
+        param.append("tag", tag.toString()),
+      );
+      debouncedQueryFilters.priorities.forEach((p) =>
+        param.append("priority", p),
+      );
+
+      if (param.toString() !== searchParams.toString()) {
+        setSearchParams(param);
+      }
     };
     updateUrl();
-  }, [queryFilters, title]);
+  }, [debouncedQueryFilters, debouncedTitle, setSearchParams, searchParams]);
 
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -98,28 +117,25 @@ export default function TodoList() {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        
+
         // 1. Đọc dữ liệu trực tiếp từ URL thay vì từ State
         const urlTitle = searchParams.get("title") || "";
         const urlTags = searchParams.getAll("tag");
         const urlPriorities = searchParams.getAll("priority");
 
-        // 2. Đồng bộ ngược lại State để các checkbox/search bar trên UI hiển thị đúng
+        // 2. Đồng bộ Title từ URL vào AuthContext (chỉ khi khác biệt)
         if (urlTitle !== title) setTitle(urlTitle);
-        setQueryFilters({
-          tags: urlTags.map((t) => Number(t)),
-          priorities: urlPriorities,
-        });
 
-        // 3. Xây dựng query string "sạch" để gửi lên API
+        // 3. Sử dụng trực tiếp searchParams hoặc xây dựng query string sạch
         const cleanQuery = new URLSearchParams();
         if (urlTitle.trim()) cleanQuery.set("title", urlTitle.trim());
         urlTags.forEach((t) => cleanQuery.append("tag", t));
         urlPriorities.forEach((p) => cleanQuery.append("priority", p));
 
-        // Gọi song song cả tasks và tags từ backend
+        const queryStr = cleanQuery.toString();
+
         const [tasksData, tagsRes] = await Promise.all([
-          todoService.getAllTasksById(cleanQuery.toString()).catch(() => []), 
+          todoService.getAllTasksById(queryStr).catch(() => []),
           tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
         ]);
 
@@ -130,7 +146,8 @@ export default function TodoList() {
         if (axiosError.response?.status !== 404) {
           console.error("Failed to fetch data:", error);
         }
-        if (!todos.length) setTodos([]);
+        // if (!todos.length) setTodos([]);
+        setTodos((prev) => (prev.length > 0 ? prev : []));
       } finally {
         setLoading(false);
       }
@@ -238,11 +255,16 @@ export default function TodoList() {
       const newTodo = await todoService.postCreateOneTask(addForm);
 
       // Kiểm tra xem task mới có khớp với các bộ lọc hiện tại không (Title, Tags, Priority)
-      const matchesTitle = !title.trim() || newTodo.title.toLowerCase().includes(title.trim().toLowerCase());
-      const matchesTags = queryFilters.tags.length === 0 || 
-                          (newTodo.tags && newTodo.tags.some(t => queryFilters.tags.includes(t.id)));
-      const matchesPriority = queryFilters.priorities.length === 0 || 
-                              queryFilters.priorities.includes(newTodo.priority);
+      const matchesTitle =
+        !title.trim() ||
+        newTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      const matchesTags =
+        queryFilters.tags.length === 0 ||
+        (newTodo.tags &&
+          newTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
+      const matchesPriority =
+        queryFilters.priorities.length === 0 ||
+        queryFilters.priorities.includes(newTodo.priority);
 
       if (matchesTitle && matchesTags && matchesPriority) {
         setTodos((prev) => [newTodo, ...prev]);
@@ -303,11 +325,16 @@ export default function TodoList() {
       });
 
       // Kiểm tra xem task sau khi cập nhật có còn khớp với các bộ lọc hiện tại không
-      const matchesTitle = !title.trim() || updatedTodo.title.toLowerCase().includes(title.trim().toLowerCase());
-      const matchesTags = queryFilters.tags.length === 0 || 
-                          (updatedTodo.tags && updatedTodo.tags.some(t => queryFilters.tags.includes(t.id)));
-      const matchesPriority = queryFilters.priorities.length === 0 || 
-                              queryFilters.priorities.includes(updatedTodo.priority);
+      const matchesTitle =
+        !title.trim() ||
+        updatedTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      const matchesTags =
+        queryFilters.tags.length === 0 ||
+        (updatedTodo.tags &&
+          updatedTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
+      const matchesPriority =
+        queryFilters.priorities.length === 0 ||
+        queryFilters.priorities.includes(updatedTodo.priority);
 
       if (matchesTitle && matchesTags && matchesPriority) {
         setTodos((prev) =>

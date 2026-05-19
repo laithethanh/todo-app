@@ -35,7 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     return null;
   });
-  const [title, setTitle] = useState<string>("");
+  const [title, setTitle] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("title") || "";
+  });
 
   useLayoutEffect(() => {
     // Cập nhật localStorage và class của document khi darkMode thay đổi
