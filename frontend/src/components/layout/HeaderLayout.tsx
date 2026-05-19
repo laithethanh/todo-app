@@ -57,9 +57,9 @@ export default function HeaderLayout() {
 
         {/* Actions */}
         <div className="flex items-center gap-4">
-          {/* Add Search Button */}
+          {/* Add Dashboard Button */}
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-            Search
+            Dashboard
           </button>
 
           {/* Dark mode toggle */}

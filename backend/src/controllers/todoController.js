@@ -15,7 +15,7 @@ const getAllTasks = async (req, res, next) => {
 
 const getAllTasksById = async (req, res, next) => {
   try {
-    const { title, tag, priority, page, sortBy, status } = req.query;
+    const { title, tag, priority, page, sortBy, status, timeFilter } = req.query;
     const userId = req.user.id;
     const result = await todoService.getTasksByUserId(userId, {
       title,
@@ -24,6 +24,7 @@ const getAllTasksById = async (req, res, next) => {
       page,
       sortBy,
       status,
+      timeFilter
     });
     if (!result.tasks || result.tasks.length === 0) {
       return next(createHttpError(404, "No tasks found for this user"));

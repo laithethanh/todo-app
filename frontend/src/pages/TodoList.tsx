@@ -18,6 +18,7 @@ import tagService from "../services/tagService";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
+import TodoDeadlineBadge from "../components/common/TodoDeadlineBadge";
 import ReactPaginate from "react-paginate";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
@@ -31,6 +32,9 @@ export default function TodoList() {
   );
   const [sortBy, setSortBy] = useState<string>(
     () => searchParams.get("sortBy") || "newest",
+  );
+  const [timeFilter, setTimeFilter] = useState<string>(
+    () => searchParams.get("timeFilter") || "all",
   );
 
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -100,7 +104,9 @@ export default function TodoList() {
     const newTags = [...debouncedQueryFilters.tags].sort().join(",");
     if (currentTags !== newTags) {
       params.delete("tag");
-      debouncedQueryFilters.tags.forEach((t) => params.append("tag", t.toString()));
+      debouncedQueryFilters.tags.forEach((t) =>
+        params.append("tag", t.toString()),
+      );
       isFilterChanged = true;
     }
 
@@ -109,7 +115,9 @@ export default function TodoList() {
     const newPrio = [...debouncedQueryFilters.priorities].sort().join(",");
     if (currentPrio !== newPrio) {
       params.delete("priority");
-      debouncedQueryFilters.priorities.forEach((p) => params.append("priority", p));
+      debouncedQueryFilters.priorities.forEach((p) =>
+        params.append("priority", p),
+      );
       isFilterChanged = true;
     }
 
@@ -129,6 +137,14 @@ export default function TodoList() {
       isFilterChanged = true;
     }
 
+    // 6. Kiểm tra thay đổi Time Filter
+    const currentTimeFilter = params.get("timeFilter") || "all";
+    if (currentTimeFilter !== timeFilter) {
+      if (timeFilter !== "all") params.set("timeFilter", timeFilter);
+      else params.delete("timeFilter");
+      isFilterChanged = true;
+    }
+
     // CHỈ reset page về 1 nếu có bất kỳ bộ lọc nào ở trên thay đổi
     if (isFilterChanged) {
       params.set("page", "1");
@@ -139,6 +155,7 @@ export default function TodoList() {
     debouncedTitle,
     sortBy,
     filter,
+    timeFilter,
     searchParams,
     setSearchParams,
   ]);
@@ -176,11 +193,13 @@ export default function TodoList() {
         const urlPage = searchParams.get("page") || "1";
         const urlSortBy = searchParams.get("sortBy") || "newest";
         const urlStatus = searchParams.get("status") || "all";
+        const urlTimeFilter = searchParams.get("timeFilter") || "all";
 
         // 2. Đồng bộ Title từ URL vào AuthContext (chỉ khi khác biệt)
         if (urlTitle !== title) setTitle(urlTitle);
         if (urlSortBy !== sortBy) setSortBy(urlSortBy);
         if (urlStatus !== filter) setFilter(urlStatus);
+        if (urlTimeFilter !== timeFilter) setTimeFilter(urlTimeFilter);
 
         // 3. Sử dụng trực tiếp searchParams hoặc xây dựng query string sạch
         const cleanQuery = new URLSearchParams();
@@ -190,6 +209,7 @@ export default function TodoList() {
         cleanQuery.set("page", urlPage);
         cleanQuery.set("sortBy", urlSortBy);
         cleanQuery.set("status", urlStatus);
+        cleanQuery.set("timeFilter", urlTimeFilter);
 
         const queryStr = cleanQuery.toString();
 
@@ -484,7 +504,7 @@ export default function TodoList() {
           </div>
 
           {/* Filter by Priority */}
-          <div>
+          <div className="mb-6">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
               Độ ưu tiên
             </h4>
@@ -507,6 +527,38 @@ export default function TodoList() {
                     className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
                   />
                   {p.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Filter by Deadline */}
+          <div className="mb-6">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
+              Hạn chót
+            </h4>
+            <div className="space-y-2">
+              {[
+                { label: "Tất cả", value: "all" },
+                { label: "Hôm nay", value: "today" },
+                { label: "Tuần này", value: "this_week" },
+                { label: "Tháng này", value: "this_month" },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    name="timeFilter" // Đảm bảo chỉ một radio được chọn
+                    value={option.value}
+                    checked={timeFilter === option.value}
+                    onChange={(e) => {
+                      setTimeFilter(e.target.value);
+                    }}
+                    className="w-4 h-4 border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
+                  />
+                  {option.label}
                 </label>
               ))}
             </div>
@@ -678,6 +730,7 @@ export default function TodoList() {
                   <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <FaClock size={10} />
+                      Ngày tạo:&nbsp;
                       {new Date(todo.created_at).toLocaleString("vi-VN", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -697,6 +750,7 @@ export default function TodoList() {
                         }`}
                       >
                         <FaCalendarAlt size={10} />
+                        Hạn chót:&nbsp;
                         {new Date(todo.deadline).toLocaleString("vi-VN", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -704,6 +758,9 @@ export default function TodoList() {
                           month: "2-digit",
                           year: "numeric",
                         })}
+                        {todo.status !== "done" && (
+                          <TodoDeadlineBadge deadline={todo.deadline} />
+                        )}
                       </span>
                     )}
                   </div>
@@ -713,30 +770,45 @@ export default function TodoList() {
         </div>
 
         {/* Pagination Controls */}
-        {!loading && pagination.totalPages > 1 && (
-          <ReactPaginate
-            breakLabel="..."
-            nextLabel="Sau"
-            onPageChange={handlePageChange}
-            pageRangeDisplayed={3}
-            marginPagesDisplayed={2}
-            pageCount={pagination.totalPages}
-            previousLabel="Trước"
-            forcePage={currentPage - 1}
-            renderOnZeroPageCount={null}
-            containerClassName="flex items-center gap-2 justify-center mt-8 select-none"
-            pageClassName="w-10 h-10 rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
-            pageLinkClassName="w-full h-full flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
-            activeClassName="bg-blue-600 border-blue-600"
-            activeLinkClassName="text-white hover:bg-blue-600 dark:hover:bg-blue-600"
-            previousClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
-            previousLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
-            nextClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
-            nextLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
-            disabledClassName="opacity-50 cursor-not-allowed"
-            disabledLinkClassName="pointer-events-none"
-            breakClassName="w-10 h-10 flex items-center justify-center dark:text-gray-400"
-          />
+        {!loading && pagination.totalItems > 0 && (
+          <div className="flex flex-col md:flex-row items-center justify-between mt-8 gap-4 border-t dark:border-gray-700 pt-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Hiển thị{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {todos.length}
+              </span>{" "}
+              trong số{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {pagination.totalItems}
+              </span>{" "}
+              kết quả
+            </p>
+            {pagination.totalPages > 1 && (
+              <ReactPaginate
+                breakLabel="..."
+                nextLabel="Sau"
+                onPageChange={handlePageChange}
+                pageRangeDisplayed={3}
+                marginPagesDisplayed={2}
+                pageCount={pagination.totalPages}
+                previousLabel="Trước"
+                forcePage={currentPage - 1}
+                renderOnZeroPageCount={null}
+                containerClassName="flex items-center gap-2 select-none"
+                pageClassName="w-10 h-10 rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+                pageLinkClassName="w-full h-full flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+                activeClassName="bg-blue-600 border-blue-600"
+                activeLinkClassName="text-white hover:bg-blue-600 dark:hover:bg-blue-600"
+                previousClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+                previousLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+                nextClassName="rounded-lg border dark:border-gray-700 transition-colors overflow-hidden"
+                nextLinkClassName="px-4 py-2 flex items-center justify-center w-full h-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
+                disabledClassName="opacity-50 cursor-not-allowed"
+                disabledLinkClassName="pointer-events-none"
+                breakClassName="w-10 h-10 flex items-center justify-center dark:text-gray-400"
+              />
+            )}
+          </div>
         )}
       </div>
 

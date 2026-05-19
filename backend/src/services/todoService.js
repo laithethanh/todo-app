@@ -16,7 +16,7 @@ const getAllTasks = async () => {
 
 const getTasksByUserId = async (
   userId,
-  { title, tag, priority, page, sortBy, status },
+  { title, tag, priority, page, sortBy, status, timeFilter },
 ) => {
   const limit = 4;
   const currentPage = Math.max(1, parseInt(page) || 1);
@@ -56,6 +56,40 @@ const getTasksByUserId = async (
       ),
       ["created_at", "desc"],
     ];
+  }
+
+  // Logic lọc theo hạn chót (deadline)
+  if (timeFilter && timeFilter !== "all") {
+    const now = new Date(); // Thời gian hiện tại của server
+    let startDate, endDate;
+
+    if (timeFilter === "today") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } else if (timeFilter === "this_week") {
+      const dayOfWeek = now.getDay(); // 0: Chủ Nhật, 1: Thứ Hai, ..., 6: Thứ Bảy
+      // Điều chỉnh để tuần bắt đầu từ Thứ Hai (1)
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6); // Cộng thêm 6 ngày để có Chủ Nhật
+      endDate.setHours(23, 59, 59, 999);
+    } else if (timeFilter === "this_month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      // Ngày cuối cùng của tháng hiện tại
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    if (startDate && endDate) {
+      if (!filter[Op.and]) {
+        filter[Op.and] = [];
+      }
+      filter[Op.and].push({
+        deadline: {
+          [Op.between]: [startDate, endDate],
+        },
+      });
+    }
   }
 
   // This include is to fetch ALL tags for the matching tasks
