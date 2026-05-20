@@ -22,6 +22,7 @@ import TodoDeadlineBadge from "../components/common/TodoDeadlineBadge";
 import ReactPaginate from "react-paginate";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
+import { useClock } from "../hooks/useClock";
 
 export default function TodoList() {
   const { title, setTitle } = useAuth();
@@ -46,6 +47,9 @@ export default function TodoList() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  // Sử dụng đồng hồ tổng từ Context
+  const { now } = useClock();
 
   const isFirstRender = useRef(true);
 
@@ -771,7 +775,10 @@ export default function TodoList() {
                           year: "numeric",
                         })}
                         {todo.status !== "done" && (
-                          <TodoDeadlineBadge deadline={todo.deadline} />
+                          <TodoDeadlineBadge
+                            deadline={todo.deadline}
+                            now={now}
+                          />
                         )}
                       </span>
                     )}
