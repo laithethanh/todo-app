@@ -14,11 +14,40 @@ const getAllTasks = async () => {
   });
 };
 
+const getAllTasksOverdue = async (userId) => {
+  return Task.findAll({
+    where: {
+      deadline: {
+        [Op.lt]: new Date(), // Nhỏ hơn thời gian hiện tại
+      },
+      status: "todo", // Chỉ lấy những task chưa hoàn thành
+      user_id: userId,
+    },
+    include: [
+      {
+        model: Tag,
+        as: "tags",
+        through: { attributes: [] },
+      },
+    ],
+    order: [["deadline", "asc"]], // Sắp xếp theo hạn chót gần nhất trước
+  });
+};
+
+const getTaskById = async (taskId, userId) => {
+  return Task.findByPk(taskId, {
+    where: {
+      user_id: userId,
+    },
+    include: [{ model: Tag, as: "tags", through: { attributes: [] } }],
+  });
+};
+
 const getTasksByUserId = async (
   userId,
   { title, tag, priority, page, sortBy, status, timeFilter },
 ) => {
-  const limit = 4;
+  const limit = 3;
   const currentPage = Math.max(1, parseInt(page) || 1);
   const offset = (currentPage - 1) * limit;
   const filter = {};
@@ -64,8 +93,24 @@ const getTasksByUserId = async (
     let startDate, endDate;
 
     if (timeFilter === "today") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0,
+        0,
+      );
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
     } else if (timeFilter === "this_week") {
       const dayOfWeek = now.getDay(); // 0: Chủ Nhật, 1: Thứ Hai, ..., 6: Thứ Bảy
       // Điều chỉnh để tuần bắt đầu từ Thứ Hai (1)
@@ -77,7 +122,15 @@ const getTasksByUserId = async (
     } else if (timeFilter === "this_month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       // Ngày cuối cùng của tháng hiện tại
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
     }
 
     if (startDate && endDate) {
@@ -254,4 +307,6 @@ module.exports = {
   updateTask,
   deleteOneTask,
   postCreateOneTask,
+  getTaskById,
+  getAllTasksOverdue,
 };

@@ -18,6 +18,14 @@ export const todoService = {
     const res = await api.get<PaginatedTodoResponse>(`/todos/me?${query}`);
     return res.data;
   },
+  getAllTasksOverdue: async (): Promise<TodoResponse[]> => {
+    const res = await api.get<TodoResponse[]>("/todos/me/overdue");
+    return res.data;
+  },
+  getOneTaskById: async (id: number): Promise<TodoResponse> => {
+    const res = await api.get<TodoResponse>(`/todos/me/${id}/deadline`);
+    return res.data;
+  },
 
   updateTaskStatus: async ({
     id,

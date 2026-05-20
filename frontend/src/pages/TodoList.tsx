@@ -181,67 +181,68 @@ export default function TodoList() {
     tags: [],
   });
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading(true);
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
 
-        // 1. Đọc dữ liệu trực tiếp từ URL thay vì từ State
-        const urlTitle = searchParams.get("title") || "";
-        const urlTags = searchParams.getAll("tag");
-        const urlPriorities = searchParams.getAll("priority");
-        const urlPage = searchParams.get("page") || "1";
-        const urlSortBy = searchParams.get("sortBy") || "newest";
-        const urlStatus = searchParams.get("status") || "all";
-        const urlTimeFilter = searchParams.get("timeFilter") || "all";
+      // 1. Đọc dữ liệu trực tiếp từ URL thay vì từ State
+      const urlTitle = searchParams.get("title") || "";
+      const urlTags = searchParams.getAll("tag");
+      const urlPriorities = searchParams.getAll("priority");
+      const urlPage = searchParams.get("page") || "1";
+      const urlSortBy = searchParams.get("sortBy") || "newest";
+      const urlStatus = searchParams.get("status") || "all";
+      const urlTimeFilter = searchParams.get("timeFilter") || "all";
 
-        // 2. Đồng bộ Title từ URL vào AuthContext (chỉ khi khác biệt)
-        if (urlTitle !== title) setTitle(urlTitle);
-        if (urlSortBy !== sortBy) setSortBy(urlSortBy);
-        if (urlStatus !== filter) setFilter(urlStatus);
-        if (urlTimeFilter !== timeFilter) setTimeFilter(urlTimeFilter);
+      // 2. Đồng bộ Title từ URL vào AuthContext (chỉ khi khác biệt)
+      if (urlTitle !== title) setTitle(urlTitle);
+      if (urlSortBy !== sortBy) setSortBy(urlSortBy);
+      if (urlStatus !== filter) setFilter(urlStatus);
+      if (urlTimeFilter !== timeFilter) setTimeFilter(urlTimeFilter);
 
-        // 3. Sử dụng trực tiếp searchParams hoặc xây dựng query string sạch
-        const cleanQuery = new URLSearchParams();
-        if (urlTitle.trim()) cleanQuery.set("title", urlTitle.trim());
-        urlTags.forEach((t) => cleanQuery.append("tag", t));
-        urlPriorities.forEach((p) => cleanQuery.append("priority", p));
-        cleanQuery.set("page", urlPage);
-        cleanQuery.set("sortBy", urlSortBy);
-        cleanQuery.set("status", urlStatus);
-        cleanQuery.set("timeFilter", urlTimeFilter);
+      // 3. Sử dụng trực tiếp searchParams hoặc xây dựng query string sạch
+      const cleanQuery = new URLSearchParams();
+      if (urlTitle.trim()) cleanQuery.set("title", urlTitle.trim());
+      urlTags.forEach((t) => cleanQuery.append("tag", t));
+      urlPriorities.forEach((p) => cleanQuery.append("priority", p));
+      cleanQuery.set("page", urlPage);
+      cleanQuery.set("sortBy", urlSortBy);
+      cleanQuery.set("status", urlStatus);
+      cleanQuery.set("timeFilter", urlTimeFilter);
 
-        const queryStr = cleanQuery.toString();
+      const queryStr = cleanQuery.toString();
 
-        const [tasksData, tagsRes] = await Promise.all([
-          todoService.getAllTasksById(queryStr).catch(() => ({
-            tasks: [],
-            totalPages: 1,
-            totalItems: 0,
-            currentPage: 1,
-            itemPerPage: 0,
-          })),
-          tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
-        ]);
+      const [tasksData, tagsRes] = await Promise.all([
+        todoService.getAllTasksById(queryStr).catch(() => ({
+          tasks: [],
+          totalPages: 1,
+          totalItems: 0,
+          currentPage: 1,
+          itemPerPage: 0,
+        })),
+        tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
+      ]);
 
-        setTodos(tasksData.tasks);
-        setPagination({
-          totalPages: tasksData.totalPages,
-          totalItems: tasksData.totalItems,
-        });
-        setAvailableTags(Array.isArray(tagsRes) ? tagsRes : []);
-      } catch (error) {
-        const axiosError = error as AxiosError;
-        if (axiosError.response?.status !== 404) {
-          console.error("Failed to fetch data:", error);
-        }
-        // if (!todos.length) setTodos([]);
-        setTodos((prev) => (prev.length > 0 ? prev : []));
-      } finally {
-        setLoading(false);
+      setTodos(tasksData.tasks);
+      setPagination({
+        totalPages: tasksData.totalPages,
+        totalItems: tasksData.totalItems,
+      });
+      setAvailableTags(Array.isArray(tagsRes) ? tagsRes : []);
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status !== 404) {
+        console.error("Failed to fetch data:", error);
       }
-    };
+      // Nếu có lỗi xảy ra (không phải 404 hoặc lỗi khác), đảm bảo danh sách trống
+      setTodos([]);
+      setPagination({ totalPages: 1, totalItems: 0 }); // Reset pagination on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchInitialData();
   }, [searchParams]); // Quan trọng: Fetch lại mỗi khi URL thay đổi
 
@@ -250,7 +251,8 @@ export default function TodoList() {
 
     try {
       await todoService.deleteOneTask({ id: selectedTodoId });
-      setTodos((prev) => prev.filter((todo) => todo.id !== selectedTodoId));
+      fetchInitialData();
+      // setTodos((prev) => prev.filter((todo) => todo.id !== selectedTodoId));
       // Không nên dùng reload thế này vì sẽ mất toast và màn hình sẽ bị giật, hiện loading
       // window.location.reload()
       toast.success("Xóa công việc thành công!");
@@ -281,9 +283,10 @@ export default function TodoList() {
         toast.success("Đã hoàn tác công việc!");
       }
       // Cập nhật lại danh sách local bằng dữ liệu chuẩn từ server trả về
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === id ? updatedTodo : todo)),
-      );
+      // setTodos((prev) =>
+      //   prev.map((todo) => (todo.id === id ? updatedTodo : todo)),
+      // );
+      fetchInitialData();
     } catch (error) {
       console.error("Failed to update task status:", error);
       toast.error("Cập nhật trạng thái thất bại!");
@@ -341,23 +344,26 @@ export default function TodoList() {
     }
 
     try {
-      const newTodo = await todoService.postCreateOneTask(addForm);
+      // const newTodo = await todoService.postCreateOneTask(addForm);
 
       // Kiểm tra xem task mới có khớp với các bộ lọc hiện tại không (Title, Tags, Priority)
-      const matchesTitle =
-        !title.trim() ||
-        newTodo.title.toLowerCase().includes(title.trim().toLowerCase());
-      const matchesTags =
-        queryFilters.tags.length === 0 ||
-        (newTodo.tags &&
-          newTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
-      const matchesPriority =
-        queryFilters.priorities.length === 0 ||
-        queryFilters.priorities.includes(newTodo.priority);
+      // const matchesTitle =
+      //   !title.trim() ||
+      //   newTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      // const matchesTags =
+      //   queryFilters.tags.length === 0 ||
+      //   (newTodo.tags &&
+      //     newTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
+      // const matchesPriority =
+      //   queryFilters.priorities.length === 0 ||
+      //   queryFilters.priorities.includes(newTodo.priority);
 
-      if (matchesTitle && matchesTags && matchesPriority) {
-        setTodos((prev) => [newTodo, ...prev]);
-      }
+      // if (matchesTitle && matchesTags && matchesPriority) {
+      //   setTodos((prev) => [newTodo, ...prev]);
+      // }
+
+      await todoService.postCreateOneTask(addForm);
+      fetchInitialData();
 
       toast.success("Thêm công việc thành công!");
       setIsAddModalOpen(false);
@@ -408,31 +414,37 @@ export default function TodoList() {
     }
 
     try {
-      const updatedTodo = await todoService.updateTask({
+      // const updatedTodo = await todoService.updateTask({
+      //   id: editingTodo.id,
+      //   data: editForm,
+      // });
+
+      // Kiểm tra xem task sau khi cập nhật có còn khớp với các bộ lọc hiện tại không
+      // const matchesTitle =
+      //   !title.trim() ||
+      //   updatedTodo.title.toLowerCase().includes(title.trim().toLowerCase());
+      // const matchesTags =
+      //   queryFilters.tags.length === 0 ||
+      //   (updatedTodo.tags &&
+      //     updatedTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
+      // const matchesPriority =
+      //   queryFilters.priorities.length === 0 ||
+      //   queryFilters.priorities.includes(updatedTodo.priority);
+
+      // if (matchesTitle && matchesTags && matchesPriority) {
+      //   setTodos((prev) =>
+      //     prev.map((t) => (t.id === editingTodo.id ? updatedTodo : t)),
+      //   );
+      // } else {
+      //   // Nếu không còn khớp với bộ lọc thì xóa khỏi danh sách hiển thị
+      //   setTodos((prev) => prev.filter((t) => t.id !== editingTodo.id));
+      // }
+
+      await todoService.updateTask({
         id: editingTodo.id,
         data: editForm,
       });
-
-      // Kiểm tra xem task sau khi cập nhật có còn khớp với các bộ lọc hiện tại không
-      const matchesTitle =
-        !title.trim() ||
-        updatedTodo.title.toLowerCase().includes(title.trim().toLowerCase());
-      const matchesTags =
-        queryFilters.tags.length === 0 ||
-        (updatedTodo.tags &&
-          updatedTodo.tags.some((t) => queryFilters.tags.includes(t.id)));
-      const matchesPriority =
-        queryFilters.priorities.length === 0 ||
-        queryFilters.priorities.includes(updatedTodo.priority);
-
-      if (matchesTitle && matchesTags && matchesPriority) {
-        setTodos((prev) =>
-          prev.map((t) => (t.id === editingTodo.id ? updatedTodo : t)),
-        );
-      } else {
-        // Nếu không còn khớp với bộ lọc thì xóa khỏi danh sách hiển thị
-        setTodos((prev) => prev.filter((t) => t.id !== editingTodo.id));
-      }
+      fetchInitialData();
 
       toast.success("Cập nhật công việc thành công!");
       setIsEditModalOpen(false);

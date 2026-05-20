@@ -19,6 +19,8 @@ import TodoList from "./pages/TodoList";
 import { AuthProvider } from "./context/AuthProvider";
 import { useAuth } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
+import TasksOverdue from "./pages/TasksOverdue";
+import OneTaskDeadline from "./pages/OneTaskDeadline";
 
 // Component xử lý chuyển hướng tại trang chủ (/) dựa trên trạng thái auth
 const HomeRedirect = () => {
@@ -79,6 +81,8 @@ const AppContent = () => {
           }
         >
           <Route path="todos" element={<TodoList />} />
+          <Route path="todos/:id/deadline" element={<OneTaskDeadline />} />
+          <Route path="todos/overdue" element={<TasksOverdue />} />
         </Route>
       </Routes>
       <ToastContainer

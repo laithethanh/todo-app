@@ -13,9 +13,37 @@ const getAllTasks = async (req, res, next) => {
   }
 };
 
+const getAllTasksOverdue = async (req, res, next) => {
+  try {
+    const userId = req.user.id; 
+    const tasks = await todoService.getAllTasksOverdue(userId);
+    if (!tasks || tasks.length === 0) {
+      return next(createHttpError(404, "No tasks found"));
+    }
+    return res.status(200).json(tasks);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getTaskById = async (req, res, next) => {
+  try {
+    const userId = req.user.id; 
+    const { id } = req.params;
+    const task = await todoService.getTaskById(id, userId);
+    if (!task || task.length === 0) {
+      return next(createHttpError(404, "No task found"));
+    }
+    return res.status(200).json(task);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getAllTasksById = async (req, res, next) => {
   try {
-    const { title, tag, priority, page, sortBy, status, timeFilter } = req.query;
+    const { title, tag, priority, page, sortBy, status, timeFilter } =
+      req.query;
     const userId = req.user.id;
     const result = await todoService.getTasksByUserId(userId, {
       title,
@@ -24,7 +52,7 @@ const getAllTasksById = async (req, res, next) => {
       page,
       sortBy,
       status,
-      timeFilter
+      timeFilter,
     });
     if (!result.tasks || result.tasks.length === 0) {
       return next(createHttpError(404, "No tasks found for this user"));
@@ -155,4 +183,6 @@ module.exports = {
   updateTask,
   deleteOneTask,
   postCreateOneTask,
+  getTaskById,
+  getAllTasksOverdue,
 };
