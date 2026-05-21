@@ -128,6 +128,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       socketInstance.disconnect();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   return (
     <SocketContext.Provider value={{ socket }}>
