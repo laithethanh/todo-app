@@ -4,8 +4,31 @@ import { memo } from "react";
 const TodoDeadlineBadge = memo(
   ({ deadline, now }: { deadline: string | Date; now: Date }) => {
     const diff = new Date(deadline).getTime() - now.getTime();
+    const isOverdue = diff < 0;
 
-    if (diff < 0) {
+    // useEffect(() => {
+    //   if (isOverdue) {
+    //     toast(
+    //       <div className="space-y-2">
+    //         <p>⚠️ Task “{title}” đã trễ hạn!</p>
+
+    //         <button
+    //           onClick={() => alert("clicked!")}
+    //           className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+    //         >
+    //           Xem chi tiết
+    //         </button>
+    //       </div>,
+    //       {
+    //         closeOnClick: false,
+    //         toastId: `overdue-${title}-${new Date(deadline).getTime()}`,
+    //         autoClose: 5000,
+    //       },
+    //     );
+    //   }
+    // }, [deadline, isOverdue, title]);
+
+    if (isOverdue) {
       return (
         <span className="ml-2 px-2 py-0.5 rounded-full border bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 text-[10px] font-bold uppercase tracking-tight">
           Nhiệm vụ quá hạn cần hoàn thành ngay

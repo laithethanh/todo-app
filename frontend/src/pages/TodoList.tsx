@@ -248,6 +248,7 @@ export default function TodoList() {
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]); // Quan trọng: Fetch lại mỗi khi URL thay đổi
 
   const confirmDeleteAction = async () => {

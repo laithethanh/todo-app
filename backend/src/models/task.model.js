@@ -40,6 +40,18 @@ const Task = sequelize.define(
       },
       onDelete: "CASCADE",
     },
+    isDeadlineNotified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isOverdueNotified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    remindBefore: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
