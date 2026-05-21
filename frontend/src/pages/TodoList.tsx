@@ -748,13 +748,14 @@ export default function TodoList() {
                     <span className="flex items-center gap-1">
                       <FaClock size={10} />
                       Ngày tạo:&nbsp;
-                      {new Date(todo.created_at).toLocaleString("vi-VN", {
+                      {/* {new Date(todo.created_at).toLocaleString("vi-VN", {
                         hour: "2-digit",
                         minute: "2-digit",
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric",
-                      })}
+                      })} */}
+                      {new Date(todo.created_at).toLocaleString("vi-VN")}
                     </span>
 
                     {todo.deadline && (
@@ -768,13 +769,14 @@ export default function TodoList() {
                       >
                         <FaCalendarAlt size={10} />
                         Hạn chót:&nbsp;
-                        {new Date(todo.deadline).toLocaleString("vi-VN", {
+                        {/* {new Date(todo.deadline).toLocaleString("vi-VN", {
                           hour: "2-digit",
                           minute: "2-digit",
                           day: "2-digit",
                           month: "2-digit",
                           year: "numeric",
-                        })}
+                        })} */}
+                        {new Date(todo.deadline).toLocaleString("vi-VN")}
                         {todo.status !== "done" && (
                           <TodoDeadlineBadge
                             deadline={todo.deadline}
