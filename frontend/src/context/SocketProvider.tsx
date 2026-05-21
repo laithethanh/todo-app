@@ -11,6 +11,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | undefined>(undefined);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [overdueCount, setOverdueCount] = useState<number>(0);
+  console.log("check overdueCount: ", overdueCount)
 
   useEffect(() => {
     // 1. Khởi tạo kết nối tới server backend
@@ -85,12 +87,13 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // 4. Lắng nghe sự kiện báo đã QUÁ HẠN (total-tasks-overdue)
     socketInstance.on("total-tasks-overdue", (data: { total: number }) => {
+      setOverdueCount((prev) => prev + data.total);
       toast.error(
         ({ closeToast }) => (
           <div className="space-y-2">
             <p className="font-medium">
-              🚨 Quá hạn! Bạn có {data.total} công việc đã quá thời gian hoàn
-              thành!
+              🚨 Quá hạn! Bạn vừa có {data.total} công việc đã quá thời gian
+              hoàn thành!
             </p>
 
             <div className="flex items-center justify-between">
@@ -128,10 +131,10 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       socketInstance.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   return (
-    <SocketContext.Provider value={{ socket }}>
+    <SocketContext.Provider value={{ socket, overdueCount, setOverdueCount }}>
       {children}
     </SocketContext.Provider>
   );

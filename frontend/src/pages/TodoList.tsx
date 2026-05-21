@@ -23,6 +23,7 @@ import ReactPaginate from "react-paginate";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import { useClock } from "../hooks/useClock";
+import { useSocket } from "../hooks/useSocket";
 
 export default function TodoList() {
   const { title, setTitle } = useAuth();
@@ -48,6 +49,9 @@ export default function TodoList() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [activeCount, setActiveCount] = useState<number>(0);
+  // const [overdueCount, setOverdueCount] = useState<number>(0);
+  const { overdueCount, setOverdueCount } = useSocket();
 
   // Sử dụng đồng hồ tổng từ Context
   const { now } = useClock();
@@ -217,16 +221,21 @@ export default function TodoList() {
 
       const queryStr = cleanQuery.toString();
 
-      const [tasksData, tagsRes] = await Promise.all([
-        todoService.getAllTasksById(queryStr).catch(() => ({
-          tasks: [],
-          totalPages: 1,
-          totalItems: 0,
-          currentPage: 1,
-          itemPerPage: 0,
-        })),
-        tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
-      ]);
+      const [tasksData, tagsRes, activeTasksRes, overdueTasksRes] =
+        await Promise.all([
+          todoService.getAllTasksById(queryStr).catch(() => ({
+            tasks: [],
+            totalPages: 1,
+            totalItems: 0,
+            currentPage: 1,
+            itemPerPage: 0,
+          })),
+          tagService.getAllTags().catch(() => []), // Trả về mảng rỗng nếu gọi API thất bại
+          todoService
+            .getAllTasksById("status=active")
+            .catch(() => ({ totalItems: 0 })),
+          todoService.getAllTasksOverdue().catch(() => []),
+        ]);
 
       setTodos(tasksData.tasks);
       setPagination({
@@ -234,6 +243,8 @@ export default function TodoList() {
         totalItems: tasksData.totalItems,
       });
       setAvailableTags(Array.isArray(tagsRes) ? tagsRes : []);
+      setActiveCount(activeTasksRes.totalItems || 0);
+      setOverdueCount(overdueTasksRes.length || 0);
     } catch (error) {
       const axiosError = error as AxiosError;
       if (axiosError.response?.status !== 404) {
@@ -613,22 +624,32 @@ export default function TodoList() {
                 onClick={() => {
                   setFilter(btn.id);
                 }}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 active:scale-95 shadow-sm ${
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 active:scale-95 shadow-sm relative ${
                   filter === btn.id
                     ? `${btn.color} text-white`
                     : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 {btn.label}
+                {btn.id === "active" && activeCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white ring-2 ring-white dark:ring-gray-900 shadow-sm">
+                    {activeCount}
+                  </span>
+                )}
               </button>
             ))}
 
             {/* Nút Overdue chuyển trang */}
             <button
               onClick={() => navigate("/auth/todos/overdue")}
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-red-600 text-white transition-all duration-200 hover:bg-red-700 active:scale-95 shadow-sm"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-red-600 text-white transition-all duration-200 hover:bg-red-700 active:scale-95 shadow-sm relative"
             >
               Overdue
+              {overdueCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-[10px] text-black font-bold ring-2 ring-white dark:ring-gray-900 shadow-sm">
+                  {overdueCount}
+                </span>
+              )}
             </button>
           </div>
 
