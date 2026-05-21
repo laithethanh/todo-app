@@ -57,7 +57,7 @@ const scanAndNotifiedTask = async () => {
 
           try {
             // Bắn tín hiệu đích danh vào phòng riêng của User đó
-            io.to(`room_user_${targetUserId}`).emit("task-warning", {
+            io.to(`room_user_${targetUserId}`).emit("task-warning-deadline", {
               id: task.id,
               title: task.title,
             });
@@ -110,11 +110,11 @@ const scanAndNotifiedTask = async () => {
 
     for (const userId in overdueMap) {
       try {
-        io.to(`room_user_${userId}`).emit("task-overdue", {
-          count: overdueMap[userId],
+        io.to(`room_user_${userId}`).emit("total-tasks-overdue", {
+          total: overdueMap[userId],
         });
         console.log(
-          `[CRON-OVERDUE-COUNT] Đã gửi tổng ${overdueMap[userId]} task quá hạn cho User Id ${userId}`,
+          `[CRON-OVERDUE-TOTAL] Đã gửi tổng ${overdueMap[userId]} task quá hạn cho User Id ${userId}`,
         );
       } catch (error) {
         console.error("Emit overdue error:", err);

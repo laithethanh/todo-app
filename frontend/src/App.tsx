@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import TodoList from "./pages/TodoList";
 import { AuthProvider } from "./context/AuthProvider";
 import { ClockProvider } from "./context/ClockProvider";
+import { SocketProvider } from "./context/SocketProvider";
 import { useAuth } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TasksOverdue from "./pages/TasksOverdue";
@@ -106,9 +107,11 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ClockProvider>
-          <AppContent />
-        </ClockProvider>
+        <SocketProvider>
+          <ClockProvider>
+            <AppContent />
+          </ClockProvider>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );
