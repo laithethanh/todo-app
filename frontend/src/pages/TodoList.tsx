@@ -15,7 +15,7 @@ import {
 } from "../types";
 import todoService from "../services/todoService";
 import tagService from "../services/tagService";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import TodoDeadlineBadge from "../components/common/TodoDeadlineBadge";
@@ -27,6 +27,7 @@ import { useClock } from "../hooks/useClock";
 export default function TodoList() {
   const { title, setTitle } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [filter, setFilter] = useState<string>(
     () => searchParams.get("status") || "all",
@@ -512,7 +513,7 @@ export default function TodoList() {
                       handleChangeTags(tag.id);
                     }}
                     type="checkbox"
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
+                    className="appearance-none w-[18px] h-[18px] border-2 border-[#4b5563] rounded bg-transparent cursor-pointer transition-all duration-200 hover:border-[#9ca3af] checked:bg-[#3b82f6] checked:border-[#3b82f6] relative flex items-center justify-center after:content-[''] after:w-2.5 after:h-2.5 after:bg-[url('/src/assets/icons/tick.svg')] after:bg-no-repeat after:bg-center after:bg-contain after:opacity-0 checked:after:opacity-100 flex-shrink-0"
                   />
                   {tag.name}
                 </label>
@@ -541,7 +542,7 @@ export default function TodoList() {
                       handleChangePriority(p.value);
                     }}
                     type="checkbox"
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
+                    className="appearance-none w-[18px] h-[18px] border-2 border-[#4b5563] rounded bg-transparent cursor-pointer transition-all duration-200 hover:border-[#9ca3af] checked:bg-[#3b82f6] checked:border-[#3b82f6] relative flex items-center justify-center after:content-[''] after:w-2.5 after:h-2.5 after:bg-[url('/src/assets/icons/tick.svg')] after:bg-no-repeat after:bg-center after:bg-contain after:opacity-0 checked:after:opacity-100 flex-shrink-0"
                   />
                   {p.label}
                 </label>
@@ -573,7 +574,7 @@ export default function TodoList() {
                     onChange={(e) => {
                       setTimeFilter(e.target.value);
                     }}
-                    className="w-4 h-4 border-gray-300 dark:border-gray-600 dark:bg-gray-700 accent-blue-600"
+                    className="appearance-none w-[18px] h-[18px] border-2 border-[#4b5563] rounded bg-transparent cursor-pointer transition-all duration-200 hover:border-[#9ca3af] checked:bg-[#3b82f6] checked:border-[#3b82f6] relative flex items-center justify-center after:content-[''] after:w-2.5 after:h-2.5 after:bg-[url('/src/assets/icons/tick.svg')] after:bg-no-repeat after:bg-center after:bg-contain after:opacity-0 checked:after:opacity-100 flex-shrink-0"
                   />
                   {option.label}
                 </label>
@@ -601,26 +602,34 @@ export default function TodoList() {
 
         {/* Status Filter & Sort */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {[
-              { id: "all", label: "All" },
-              { id: "active", label: "Active" },
-              { id: "completed", label: "Completed" },
+              { id: "all", label: "All", color: "bg-blue-600" },
+              { id: "active", label: "Active", color: "bg-gray-500" },
+              { id: "completed", label: "Completed", color: "bg-green-600" },
             ].map((btn) => (
               <button
                 key={btn.id}
                 onClick={() => {
                   setFilter(btn.id);
                 }}
-                className={`px-3 py-1 rounded transition-colors ${
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 active:scale-95 shadow-sm ${
                   filter === btn.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    ? `${btn.color} text-white`
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 {btn.label}
               </button>
             ))}
+
+            {/* Nút Overdue chuyển trang */}
+            <button
+              onClick={() => navigate("/auth/todos/overdue")}
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-red-600 text-white transition-all duration-200 hover:bg-red-700 active:scale-95 shadow-sm"
+            >
+              Overdue
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -667,7 +676,7 @@ export default function TodoList() {
                       type="checkbox"
                       checked={todo.status === "done"}
                       onChange={() => toggleTodo(todo.id)}
-                      className="w-5 h-5 cursor-pointer accent-blue-600 rounded mt-1"
+                      className="appearance-none w-[18px] h-[18px] border-2 border-[#4b5563] rounded bg-transparent cursor-pointer transition-all duration-200 hover:border-[#9ca3af] checked:bg-[#3b82f6] checked:border-[#3b82f6] relative flex items-center justify-center after:content-[''] after:w-2.5 after:h-2.5 after:bg-[url('/src/assets/icons/tick.svg')] after:bg-no-repeat after:bg-center after:bg-contain after:opacity-0 checked:after:opacity-100 flex-shrink-0 mt-1"
                     />
                     <div>
                       <h3
